@@ -23,8 +23,31 @@ def _pause_if_windows() -> None:
     pause()
 
 
+def _hide_console() -> None:
+    if sys.platform == "win32":
+        from src.platform.windows.console import hide
+
+    else:
+        from src.platform.linux.console import hide
+
+    hide()
+
+
+def _show_console() -> None:
+    if sys.platform == "win32":
+        from src.platform.windows.console import show
+
+    else:
+        from src.platform.linux.console import show
+
+    show()
+
+
 def main() -> None:
     """Application entry point."""
+
+    if getattr(sys, "frozen", False):
+        _hide_console()
 
     parser = argparse.ArgumentParser(
         prog=APP_NAME,
@@ -57,16 +80,19 @@ def main() -> None:
     args = parser.parse_args()
 
     if args.install:
+        _show_console()
         install(force=True)
         _pause_if_windows()
         sys.exit(0)
 
     if args.uninstall:
+        _show_console()
         uninstall()
         _pause_if_windows()
         sys.exit(0)
 
     if getattr(sys, "frozen", False) and not is_installed():
+        _show_console()
         print(f"{APP_NAME}: first run detected - installing...")
         print()
         install()
