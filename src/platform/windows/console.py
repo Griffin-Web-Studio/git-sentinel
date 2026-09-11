@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ctypes
+import os
 from typing import Any
 
 # ─────────────────────────────────────────────────────────────────| Console |──
@@ -25,18 +26,22 @@ def _user32() -> Any:
 
 
 def _owns_console() -> bool:
-    """True when this process is the sole one attached to its console.
+    """True when nothing but this app's own process tree is attached.
 
-    Windows creates a console exclusively for a process launched by
-    double-click or shortcut. When launched from an already-open terminal,
-    the process instead attaches to that shell's existing console, which
-    this must never hide.
+    PyInstaller's onefile bootloader on Windows always runs the frozen app
+    as a child process of the bootloader, and both stay attached to the
+    same console for the app's whole lifetime - so even a fresh
+    double-click/shortcut launch reports 2 attached processes (bootloader
+    parent + this one), never 1. Anything beyond that pair means the
+    console is shared with something else, e.g. a terminal the user
+    already had open, which this must never hide.
     """
 
     pids = (ctypes.c_uint * 8)()
-    attached = _kernel32().GetConsoleProcessList(pids, 8)
+    count = int(_kernel32().GetConsoleProcessList(pids, 8))
+    attached = {int(pids[i]) for i in range(min(count, 8))}
 
-    return bool(attached <= 1)
+    return attached <= {os.getpid(), os.getppid()}
 
 
 def hide() -> None:
