@@ -6,6 +6,7 @@ from pathlib import Path
 
 from . import APP_NAME, CONF_DIR, STATE_DIR
 from src.config.template import render_config, wrap_comment
+from src.reporter import ConsoleReporter, Reporter
 from .models import ConfigEntry, ConfigSection
 
 if sys.platform == "win32":  # pragma: no cover - Windows only
@@ -213,21 +214,6 @@ def _render_example_config() -> str:
     )
 
 
-def _ask_purge() -> bool:
-    """Prompt interactively; default to keeping data when non-interactive."""
-
-    if not sys.stdin.isatty():
-        return False
-
-    try:
-        answer = input("\nRemove config and state data? [y/N] ").strip().lower()
-
-        return answer in ("y", "yes")
-
-    except EOFError:
-        return False
-
-
 # ───────────────────────────────────────────────────────────────────| State |──
 
 
@@ -244,7 +230,7 @@ def is_installed() -> bool:
 # ───────────────────────────────────────────────| Install steps (protected) |──
 
 
-def _install_binary() -> None:
+def _install_binary() -> str:
     """Copies the app binary into a destination location"""
 
     src = _current_binary()
@@ -258,10 +244,11 @@ def _install_binary() -> None:
         pass
 
     BINARY_DST.chmod(0o755)
-    print(f"Installed binary\t→ {BINARY_DST}")
+
+    return f"Installed binary\t→ {BINARY_DST}"
 
 
-def _install_config() -> None:
+def _install_config() -> str:
     """Create config dir, write the platform-specific example, and seed the live
     settings.ini from it on first install.
     """
@@ -272,27 +259,26 @@ def _install_config() -> None:
 
     CONF_DIR.mkdir(parents=True, exist_ok=True)
     example_dst.write_text(content, encoding="utf-8")
-    print(f"Installed example\t→ {example_dst}")
+    lines = [f"Installed example\t→ {example_dst}"]
 
     if not config.exists():
         config.write_text(content, encoding="utf-8")
-        print(f"Created config\t\t→ {config}  (edit to customise)")
+        lines.append(f"Created config\t\t→ {config}  (edit to customise)")
 
-        return
+    else:
+        lines.append(f"Existing config\t\t→ {config}  (left unchanged)")
 
-    print(f"Existing config\t\t→ {config}  (left unchanged)")
+    return "\n".join(lines)
 
 
 # ─────────────────────────────────────────────────────────| Uninstall steps |──
 
 
-def _remove_binary() -> None:
+def _remove_binary() -> str:
     """removes the binary"""
 
     if not BINARY_DST.exists():
-        print(f"Binary not found\t→ {BINARY_DST}  (skipping)")
-
-        return
+        return f"Binary not found\t→ {BINARY_DST}  (skipping)"
 
     if sys.platform == "win32":  # pragma: no cover - Windows only
         from src.platform.windows.installer import remove_binary
@@ -300,40 +286,44 @@ def _remove_binary() -> None:
     else:
         from src.platform.linux.installer import remove_binary
 
-    remove_binary()
+    return remove_binary()
 
 
-def _remove_config() -> None:
+def _remove_config() -> str:
     """removes the config dir"""
 
     if CONF_DIR.exists():
         shutil.rmtree(CONF_DIR)
-        print(f"Removed config\t\t→ {CONF_DIR}")
 
-    else:
-        print(f"Config not found\t→ {CONF_DIR}  (skipping)")
+        return f"Removed config\t\t→ {CONF_DIR}"
+
+    return f"Config not found\t→ {CONF_DIR}  (skipping)"
 
 
-def _remove_state() -> None:
+def _remove_state() -> str:
     """remove state dir"""
 
     if STATE_DIR.exists():
         shutil.rmtree(STATE_DIR)
-        print(f"Removed state\t\t→ {STATE_DIR}")
 
-    else:
-        print(f"State not found\t\t→ {STATE_DIR}  (skipping)")
+        return f"Removed state\t\t→ {STATE_DIR}"
+
+    return f"State not found\t\t→ {STATE_DIR}  (skipping)"
 
 
 # ─────────────────────────────────────────────────────────────| Public API  |──
 
 
-def install(*, force: bool = False) -> None:
+def install(*, force: bool = False, reporter: Reporter | None = None) -> None:
     """Public API to initialise application installation
 
     Args:
         force (bool, optional): force install flag. Defaults to False.
+        reporter (Reporter, optional): where status/prompts go. Defaults to
+            a console-based reporter.
     """
+
+    reporter = reporter or ConsoleReporter()
 
     if sys.platform not in ("linux", "win32"):
         print(
@@ -343,13 +333,10 @@ def install(*, force: bool = False) -> None:
 
         sys.exit(1)
 
-    print(
-        f"NOTICE: {sys.platform} detected, installing {APP_NAME}...",
-        file=sys.stderr,
-    )
+    reporter.info(f"NOTICE: {sys.platform} detected, installing {APP_NAME}...")
 
-    _install_binary()
-    _install_config()
+    reporter.info(_install_binary())
+    reporter.info(_install_config())
 
     if sys.platform == "linux":
         from src.platform.linux.installer import (
@@ -358,17 +345,22 @@ def install(*, force: bool = False) -> None:
             install_launcher,
         )
 
-        install_icon(_resource(f"{APP_NAME}.svg"))
-        install_autostart(
-            _render_desktop(str(BINARY_DST), "X-GNOME-Autostart-enabled=true")
+        reporter.info(install_icon(_resource(f"{APP_NAME}.svg")))
+        reporter.info(
+            install_autostart(
+                _render_desktop(
+                    str(BINARY_DST), "X-GNOME-Autostart-enabled=true"
+                )
+            )
         )
-        install_launcher(
-            _render_desktop(f"{BINARY_DST} --force", "Categories=Utility;")
+        reporter.info(
+            install_launcher(
+                _render_desktop(f"{BINARY_DST} --force", "Categories=Utility;")
+            )
         )
 
     elif sys.platform == "win32":  # pragma: no cover - Windows only
         from src.platform.windows.installer import (
-            ask_desktop_shortcut,
             install_autostart_windows,
             install_desktop_shortcut,
             install_programs_entry,
@@ -376,24 +368,31 @@ def install(*, force: bool = False) -> None:
             install_start_menu_uninstall,
         )
 
-        install_autostart_windows()
-        install_start_menu()
-        install_start_menu_uninstall()
-        install_programs_entry()
+        reporter.info(install_autostart_windows())
+        reporter.info(install_start_menu())
+        reporter.info(install_start_menu_uninstall())
+        reporter.info(install_programs_entry())
 
-        if ask_desktop_shortcut():
-            install_desktop_shortcut()
+        if reporter.confirm("Create a Desktop shortcut?", default=True):
+            reporter.info(install_desktop_shortcut())
 
-    print()
-    print(f"{APP_NAME} installed - will open automatically on next login.")
+    reporter.info("")
+    reporter.info(f"{APP_NAME} installed - will open automatically on next login.")
 
     if not force:
-        print(f"To run immediately:\t{BINARY_DST} --force")
-        print(f"To configure:\t\t{CONF_DIR / 'settings.ini'}")
+        reporter.info(f"To run immediately:\t{BINARY_DST} --force")
+        reporter.info(f"To configure:\t\t{CONF_DIR / 'settings.ini'}")
 
 
-def uninstall() -> None:
-    """Public API to initialise application uninstallation"""
+def uninstall(*, reporter: Reporter | None = None) -> None:
+    """Public API to initialise application uninstallation
+
+    Args:
+        reporter (Reporter, optional): where status/prompts go. Defaults to
+            a console-based reporter.
+    """
+
+    reporter = reporter or ConsoleReporter()
 
     if sys.platform == "linux":
         from src.platform.linux.installer import (
@@ -402,9 +401,9 @@ def uninstall() -> None:
             remove_launcher,
         )
 
-        remove_autostart()
-        remove_launcher()
-        remove_icon()
+        reporter.info(remove_autostart())
+        reporter.info(remove_launcher())
+        reporter.info(remove_icon())
 
     elif sys.platform == "win32":  # pragma: no cover - Windows only
         from src.platform.windows.installer import (
@@ -415,25 +414,25 @@ def uninstall() -> None:
             remove_start_menu_uninstall,
         )
 
-        remove_autostart_windows()
-        remove_programs_entry()
-        remove_start_menu_uninstall()
-        remove_start_menu()
-        remove_desktop_shortcut()
+        reporter.info(remove_autostart_windows())
+        reporter.info(remove_programs_entry())
+        reporter.info(remove_start_menu_uninstall())
+        reporter.info(remove_start_menu())
+        reporter.info(remove_desktop_shortcut())
 
-    purge = _ask_purge()
+    purge = reporter.confirm("Remove config and state data?", default=False)
 
     if purge:
-        _remove_config()
-        _remove_state()
+        reporter.info(_remove_config())
+        reporter.info(_remove_state())
 
     else:
-        print()
-        print("Config and run-state left intact:")
-        print(f"  {CONF_DIR}")
-        print(f"  {STATE_DIR}")
+        reporter.info("")
+        reporter.info("Config and run-state left intact:")
+        reporter.info(f"  {CONF_DIR}")
+        reporter.info(f"  {STATE_DIR}")
 
-    _remove_binary()
+    reporter.info(_remove_binary())
 
-    print()
-    print("Uninstallation complete.")
+    reporter.info("")
+    reporter.info("Uninstallation complete.")

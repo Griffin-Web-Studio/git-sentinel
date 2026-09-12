@@ -53,11 +53,11 @@ DESKTOP_SHORTCUT = _desktop_dir() / f"{APP_NAME}.lnk"
 # ───────────────────────────────────────────────| Install steps (protected) |──
 
 
-def install_autostart_windows() -> None:
+def install_autostart_windows() -> str:
     """Add a Run registry value so the app launches at Windows login."""
 
     if sys.platform != "win32":
-        return
+        return ""
 
     key = _winreg.OpenKey(
         _winreg.HKEY_CURRENT_USER, _RUN_KEY, 0, _winreg.KEY_SET_VALUE
@@ -66,14 +66,14 @@ def install_autostart_windows() -> None:
     _winreg.SetValueEx(key, APP_NAME, 0, _winreg.REG_SZ, str(BINARY_DST))
     _winreg.CloseKey(key)
 
-    print(f"Registered autostart\t→ HKCU\\...\\Run\\{APP_NAME}")
+    return f"Registered autostart\t→ HKCU\\...\\Run\\{APP_NAME}"
 
 
-def remove_autostart_windows() -> None:
+def remove_autostart_windows() -> str:
     """Remove the Run registry value added by install_autostart_windows."""
 
     if sys.platform != "win32":
-        return
+        return ""
 
     try:
         key = _winreg.OpenKey(
@@ -82,10 +82,10 @@ def remove_autostart_windows() -> None:
         _winreg.DeleteValue(key, APP_NAME)
         _winreg.CloseKey(key)
 
-        print(f"Removed autostart\t→ HKCU\\...\\Run\\{APP_NAME}")
+        return f"Removed autostart\t→ HKCU\\...\\Run\\{APP_NAME}"
 
     except FileNotFoundError:
-        print(f"Autostart not found\t→ HKCU\\...\\Run\\{APP_NAME}  (skipping)")
+        return f"Autostart not found\t→ HKCU\\...\\Run\\{APP_NAME}  (skipping)"
 
 
 def create_lnk(lnk: Path, target: Path, args: str, description: str) -> None:
@@ -104,14 +104,20 @@ def create_lnk(lnk: Path, target: Path, args: str, description: str) -> None:
         f" $s.Save()"
     )
 
+    creationflags = 0
+
+    if sys.platform == "win32":
+        creationflags = subprocess.CREATE_NO_WINDOW
+
     subprocess.run(
         ["powershell", "-NoProfile", "-NonInteractive", "-Command", script],
         check=True,
         capture_output=True,
+        creationflags=creationflags,
     )
 
 
-def install_start_menu() -> None:
+def install_start_menu() -> str:
     """Create a Start Menu shortcut so the app is discoverable from the
     Windows shell."""
 
@@ -120,47 +126,35 @@ def install_start_menu() -> None:
     create_lnk(
         START_MENU_SHORTCUT, BINARY_DST, "--force", "Daily git repository audit"
     )
-    print(f"Registered Start Menu\t→ {START_MENU_SHORTCUT}")
+
+    return f"Registered Start Menu\t→ {START_MENU_SHORTCUT}"
 
 
-def ask_desktop_shortcut() -> bool:
-    """Prompt whether to add a Desktop shortcut; defaults to Yes."""
-
-    if not sys.stdin.isatty():
-        return True
-
-    try:
-        answer = input("\nCreate a Desktop shortcut? [Y/n] ").strip().lower()
-
-        return answer not in ("n", "no")
-
-    except EOFError:
-        return True
-
-
-def install_desktop_shortcut() -> None:
+def install_desktop_shortcut() -> str:
     """Create a Desktop shortcut alongside the Start Menu entry."""
 
     create_lnk(
         DESKTOP_SHORTCUT, BINARY_DST, "--force", "Daily git repository audit"
     )
-    print(f"Registered Desktop\t→ {DESKTOP_SHORTCUT}")
+
+    return f"Registered Desktop\t→ {DESKTOP_SHORTCUT}"
 
 
-def install_start_menu_uninstall() -> None:
+def install_start_menu_uninstall() -> str:
     """Create an Uninstall shortcut in the Start Menu subfolder."""
 
     create_lnk(
         START_MENU_UNINSTALL, BINARY_DST, "--uninstall", f"Uninstall {APP_NAME}"
     )
-    print(f"Registered uninstall entry\t→ {START_MENU_UNINSTALL}")
+
+    return f"Registered uninstall entry\t→ {START_MENU_UNINSTALL}"
 
 
-def install_programs_entry() -> None:
+def install_programs_entry() -> str:
     """Register the app in Settings > Apps (Add/Remove Programs)."""
 
     if sys.platform != "win32":
-        return
+        return ""
 
     key = _winreg.CreateKeyEx(
         _winreg.HKEY_CURRENT_USER, _UNINSTALL_KEY, 0, _winreg.KEY_SET_VALUE
@@ -175,13 +169,14 @@ def install_programs_entry() -> None:
     _winreg.SetValueEx(key, "NoModify", 0, _winreg.REG_DWORD, 1)
     _winreg.SetValueEx(key, "NoRepair", 0, _winreg.REG_DWORD, 1)
     _winreg.CloseKey(key)
-    print(f"Registered Programs entry\t→ HKCU\\...\\Uninstall\\{APP_NAME}")
+
+    return f"Registered Programs entry\t→ HKCU\\...\\Uninstall\\{APP_NAME}"
 
 
 # ─────────────────────────────────────────────────────────| Uninstall steps |──
 
 
-def remove_binary() -> None:
+def remove_binary() -> str:
     """removes the binary"""
 
     # Windows locks a running EXE so it cannot be deleted directly.
@@ -219,18 +214,19 @@ def remove_binary() -> None:
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
     )
-    print(f"Scheduled binary removal\t→ {BINARY_DST}")
+
+    return f"Scheduled binary removal\t→ {BINARY_DST}"
 
 
-def remove_start_menu() -> None:
+def remove_start_menu() -> str:
     """Remove the main Start Menu shortcut and prune the folder if empty."""
 
     if START_MENU_SHORTCUT.exists():
         START_MENU_SHORTCUT.unlink()
-        print(f"Removed Start Menu\t→ {START_MENU_SHORTCUT}")
+        message = f"Removed Start Menu\t→ {START_MENU_SHORTCUT}"
 
     else:
-        print(f"Start Menu not found\t→ {START_MENU_SHORTCUT}  (skipping)")
+        message = f"Start Menu not found\t→ {START_MENU_SHORTCUT}  (skipping)"
 
     try:
         START_MENU_DIR.rmdir()
@@ -238,16 +234,18 @@ def remove_start_menu() -> None:
     except OSError:
         pass
 
+    return message
 
-def remove_start_menu_uninstall() -> None:
+
+def remove_start_menu_uninstall() -> str:
     """Remove the Uninstall shortcut and prune the folder if empty."""
 
     if START_MENU_UNINSTALL.exists():
         START_MENU_UNINSTALL.unlink()
-        print(f"Removed uninstall entry\t→ {START_MENU_UNINSTALL}")
+        message = f"Removed uninstall entry\t→ {START_MENU_UNINSTALL}"
 
     else:
-        print(
+        message = (
             f"Uninstall entry not found\t→ {START_MENU_UNINSTALL}  (skipping)"
         )
 
@@ -257,30 +255,33 @@ def remove_start_menu_uninstall() -> None:
     except OSError:
         pass
 
+    return message
 
-def remove_programs_entry() -> None:
+
+def remove_programs_entry() -> str:
     """Remove the app from Settings > Apps (Add/Remove Programs)."""
 
     if sys.platform != "win32":
-        return
+        return ""
 
     try:
         _winreg.DeleteKey(_winreg.HKEY_CURRENT_USER, _UNINSTALL_KEY)
-        print(f"Removed Programs entry\t→ HKCU\\...\\Uninstall\\{APP_NAME}")
+
+        return f"Removed Programs entry\t→ HKCU\\...\\Uninstall\\{APP_NAME}"
 
     except FileNotFoundError:
-        print(
+        return (
             f"Programs entry not found\t→ HKCU\\...\\Uninstall\\{APP_NAME}"
             "  (skipping)"
         )
 
 
-def remove_desktop_shortcut() -> None:
+def remove_desktop_shortcut() -> str:
     """Remove the Desktop shortcut if present."""
 
     if DESKTOP_SHORTCUT.exists():
         DESKTOP_SHORTCUT.unlink()
-        print(f"Removed Desktop\t\t→ {DESKTOP_SHORTCUT}")
 
-    else:
-        print(f"Desktop not found\t→ {DESKTOP_SHORTCUT}  (skipping)")
+        return f"Removed Desktop\t\t→ {DESKTOP_SHORTCUT}"
+
+    return f"Desktop not found\t→ {DESKTOP_SHORTCUT}  (skipping)"
