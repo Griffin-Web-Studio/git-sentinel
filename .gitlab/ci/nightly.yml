@@ -87,6 +87,7 @@ build:windows:nightly:
   artifacts:
     paths:
       - dist/git-sentinel.exe
+      - dist/git-sentinel-gui.exe
     expire_in: 3 days
 
 # ─────────────────────────────────────────────────| Shared publish template |──
@@ -126,3 +127,10 @@ publish:windows:nightly:
   variables:
     PACKAGE_VERSION: nightly
     BINARY: git-sentinel.exe
+
+publish:windows-gui:nightly:
+  extends: .publish
+  needs: [build:windows:nightly]
+  variables:
+    PACKAGE_VERSION: nightly
+    BINARY: git-sentinel-gui.exe
