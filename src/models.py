@@ -268,6 +268,29 @@ class GateHTTP(Gate):
     retry: bool = False
 
 
+@dataclass
+class Confirm:
+    """Blocking yes/no request raised by GuiReporter.confirm().
+
+    Not a Gate subclass: a plain confirmation has no url/repo to show.
+
+    Attributes:
+        prompt: Question text shown to the user.
+        default: Answer to use if the user dismisses without choosing.
+        result: Set to the user's answer by the UI before event.set().
+        event: Synchronisation primitive; set by the UI when the user
+            responds. Not included in __init__ or repr.
+    """
+
+    prompt: str
+    default: bool
+    result: bool = False
+    event: threading.Event = field(init=False, repr=False)
+
+    def __post_init__(self) -> None:
+        self.event = threading.Event()
+
+
 # ─────────────────────────────────────────────| Config template data models |──
 
 
