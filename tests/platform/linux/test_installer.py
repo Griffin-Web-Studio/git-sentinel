@@ -409,7 +409,7 @@ class TestUninstall:
         called.
 
         Args:
-            monkeypatch (pytest.MonkeyPatch): Makes _ask_purge return True.
+            monkeypatch (pytest.MonkeyPatch): Sets sys.platform to 'linux'.
         """
 
         monkeypatch.setattr(sys, "platform", "linux")
@@ -433,7 +433,7 @@ class TestUninstall:
         """On Linux with purge declined, config and state are left on disk.
 
         Args:
-            monkeypatch (pytest.MonkeyPatch): Makes _ask_purge return False.
+            monkeypatch (pytest.MonkeyPatch): Sets sys.platform to 'linux'.
         """
 
         monkeypatch.setattr(sys, "platform", "linux")
