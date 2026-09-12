@@ -8,6 +8,7 @@ dependencies = ["gitpython>=3.1.50"]
 
 [project.scripts]
 git-sentinel = "__main__:main"
+git-sentinel-gui = "__main__:main_gui"
 
 [build-system]
 requires = ["hatchling"]

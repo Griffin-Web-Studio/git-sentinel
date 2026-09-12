@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import argparse
+import configparser
 import shutil
 import sys
+from typing import Literal
 
 from src.config import load_config
 from src.installer import install, is_installed, uninstall
@@ -21,26 +23,6 @@ def _pause_if_windows() -> None:
         from src.platform.linux.console import pause
 
     pause()
-
-
-def _hide_console() -> None:
-    if sys.platform == "win32":
-        from src.platform.windows.console import hide
-
-    else:
-        from src.platform.linux.console import hide
-
-    hide()
-
-
-def _show_console() -> None:
-    if sys.platform == "win32":
-        from src.platform.windows.console import show
-
-    else:
-        from src.platform.linux.console import show
-
-    show()
 
 
 def _require_git() -> None:
@@ -77,11 +59,8 @@ def _require_git() -> None:
     sys.exit(1)
 
 
-def main() -> None:
-    """Application entry point."""
-
-    if getattr(sys, "frozen", False):
-        _hide_console()
+def _build_parser() -> argparse.ArgumentParser:
+    """Build the argument parser shared by both entry points."""
 
     parser = argparse.ArgumentParser(
         prog=APP_NAME,
@@ -111,22 +90,48 @@ def main() -> None:
         "then exit.",
     )
 
-    args = parser.parse_args()
+    return parser
+
+
+def _run_scan_gui(cfg: configparser.ConfigParser) -> None:
+    """Launch the Tkinter scan GUI. Identical for both binaries."""
+
+    from .ui.gui.app import GitSentinelApp
+
+    app = GitSentinelApp(cfg)
+    app.mainloop()
+
+
+def _run_gui_installer(
+    mode: Literal["install", "uninstall"], *, force: bool = False
+) -> None:
+    """Run install()/uninstall() behind the windowed build's InstallerWindow."""
+
+    from .ui.gui.views.installer_window import InstallerWindow
+
+    InstallerWindow(mode, force=force).mainloop()
+
+
+def main() -> None:
+    """Console-subsystem entry point.
+
+    install()/uninstall()/first-run use the terminal (this binary's console
+    is never hidden - it is the intended UI for these flows).
+    """
+
+    args = _build_parser().parse_args()
 
     if args.install:
-        _show_console()
         install(force=True)
         _pause_if_windows()
         sys.exit(0)
 
     if args.uninstall:
-        _show_console()
         uninstall()
         _pause_if_windows()
         sys.exit(0)
 
     if getattr(sys, "frozen", False) and not is_installed():
-        _show_console()
         print(f"{APP_NAME}: first run detected - installing...")
         print()
         install()
@@ -139,11 +144,37 @@ def main() -> None:
         sys.exit(0)
 
     _require_git()
+    _run_scan_gui(cfg)
 
-    from .ui.gui.app import GitSentinelApp
 
-    app = GitSentinelApp(cfg)
-    app.mainloop()
+def main_gui() -> None:
+    """Windowed-subsystem entry point.
+
+    install()/uninstall()/first-run open InstallerWindow instead of using
+    the terminal - this binary never allocates a console at all.
+    """
+
+    args = _build_parser().parse_args()
+
+    if args.install:
+        _run_gui_installer("install", force=True)
+        sys.exit(0)
+
+    if args.uninstall:
+        _run_gui_installer("uninstall")
+        sys.exit(0)
+
+    if getattr(sys, "frozen", False) and not is_installed():
+        _run_gui_installer("install")
+        sys.exit(0)
+
+    cfg = load_config()
+
+    if not should_run_today(cfg, force=args.force):
+        sys.exit(0)
+
+    _require_git()
+    _run_scan_gui(cfg)
 
 
 if __name__ == "__main__":
