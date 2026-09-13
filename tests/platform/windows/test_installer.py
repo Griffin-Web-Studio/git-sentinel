@@ -504,6 +504,96 @@ class TestInstall:
         mock_reporter.confirm.assert_called_once()
         mock_install_desktop.assert_called_once()
 
+    def test_explicit_true_bypasses_confirm(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """When create_desktop_shortcut=True is passed explicitly (the
+        wizard's Options-page checkbox), reporter.confirm() is never called
+        and the shortcut is still installed.
+
+        Args:
+            monkeypatch (pytest.MonkeyPatch): Sets sys.platform to 'win32'
+                and injects stubs for all Windows-only install functions.
+        """
+
+        monkeypatch.setattr(sys, "platform", "win32")
+
+        mock_install_desktop = MagicMock()
+        mock_reporter = MagicMock()
+
+        for name in (
+            "install_autostart_windows",
+            "install_start_menu",
+            "install_start_menu_uninstall",
+            "install_programs_entry",
+        ):
+            monkeypatch.setattr(
+                f"src.platform.windows.installer.{name}", MagicMock()
+            )
+
+        monkeypatch.setattr(
+            "src.platform.windows.installer.install_desktop_shortcut",
+            mock_install_desktop,
+        )
+
+        with (
+            patch("src.installer._install_binary"),
+            patch("src.installer._install_config"),
+        ):
+            install(
+                force=True,
+                reporter=mock_reporter,
+                create_desktop_shortcut=True,
+            )
+
+        mock_reporter.confirm.assert_not_called()
+        mock_install_desktop.assert_called_once()
+
+    def test_explicit_false_bypasses_confirm_and_skips_shortcut(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """When create_desktop_shortcut=False is passed explicitly,
+        reporter.confirm() is never called and the shortcut is not
+        installed.
+
+        Args:
+            monkeypatch (pytest.MonkeyPatch): Sets sys.platform to 'win32'
+                and injects stubs for all Windows-only install functions.
+        """
+
+        monkeypatch.setattr(sys, "platform", "win32")
+
+        mock_install_desktop = MagicMock()
+        mock_reporter = MagicMock()
+
+        for name in (
+            "install_autostart_windows",
+            "install_start_menu",
+            "install_start_menu_uninstall",
+            "install_programs_entry",
+        ):
+            monkeypatch.setattr(
+                f"src.platform.windows.installer.{name}", MagicMock()
+            )
+
+        monkeypatch.setattr(
+            "src.platform.windows.installer.install_desktop_shortcut",
+            mock_install_desktop,
+        )
+
+        with (
+            patch("src.installer._install_binary"),
+            patch("src.installer._install_config"),
+        ):
+            install(
+                force=True,
+                reporter=mock_reporter,
+                create_desktop_shortcut=False,
+            )
+
+        mock_reporter.confirm.assert_not_called()
+        mock_install_desktop.assert_not_called()
+
 
 class TestUninstall:
     """Tests uninstall() dispatches to the Windows removal steps."""

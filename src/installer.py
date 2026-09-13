@@ -10,10 +10,16 @@ from src.reporter import ConsoleReporter, Reporter
 from .models import ConfigEntry, ConfigSection
 
 if sys.platform == "win32":  # pragma: no cover - Windows only
-    from src.platform.windows.installer import BIN_DIR, BINARY_DST
+    from src.platform.windows.installer import (
+        BIN_DIR as BIN_DIR,
+        BINARY_DST as BINARY_DST,
+    )
 
 else:
-    from src.platform.linux.installer import BIN_DIR, BINARY_DST
+    from src.platform.linux.installer import (
+        BIN_DIR as BIN_DIR,
+        BINARY_DST as BINARY_DST,
+    )
 
 # ───────────────────────────────────────────────────────────────| Resources |──
 
@@ -314,13 +320,23 @@ def _remove_state() -> str:
 # ─────────────────────────────────────────────────────────────| Public API  |──
 
 
-def install(*, force: bool = False, reporter: Reporter | None = None) -> None:
+def install(
+    *,
+    force: bool = False,
+    reporter: Reporter | None = None,
+    create_desktop_shortcut: bool | None = None,
+) -> None:
     """Public API to initialise application installation
 
     Args:
         force (bool, optional): force install flag. Defaults to False.
         reporter (Reporter, optional): where status/prompts go. Defaults to
             a console-based reporter.
+        create_desktop_shortcut (bool, optional): Windows-only. When None
+            (default), prompts via reporter.confirm() exactly as before -
+            this is what the console binary always gets. When explicitly
+            True/False (the windowed wizard's Options-page checkbox), that
+            decision is used directly and reporter.confirm() is not called.
     """
 
     reporter = reporter or ConsoleReporter()
@@ -373,11 +389,18 @@ def install(*, force: bool = False, reporter: Reporter | None = None) -> None:
         reporter.info(install_start_menu_uninstall())
         reporter.info(install_programs_entry())
 
-        if reporter.confirm("Create a Desktop shortcut?", default=True):
+        if create_desktop_shortcut is None:
+            create_desktop_shortcut = reporter.confirm(
+                "Create a Desktop shortcut?", default=True
+            )
+
+        if create_desktop_shortcut:
             reporter.info(install_desktop_shortcut())
 
     reporter.info("")
-    reporter.info(f"{APP_NAME} installed - will open automatically on next login.")
+    reporter.info(
+        f"{APP_NAME} installed - will open automatically on next login."
+    )
 
     if not force:
         reporter.info(f"To run immediately:\t{BINARY_DST} --force")
