@@ -33,6 +33,20 @@ class TagIssueReason(Enum):
     NOT_IN_REMOTE = "not_in_remote"
 
 
+class InstallStep(Enum):
+    """Identifies which page of the install wizard is currently shown.
+
+    Used by InstallerController to drive the Tkinter wizard's page-swap
+    logic (and, in future, a TUI's equivalent) without either view needing
+    its own notion of step ordering.
+    """
+
+    WELCOME = "welcome"
+    OPTIONS = "options"
+    INSTALLING = "installing"
+    FINISH = "finish"
+
+
 class RemoteSkipReason(Enum):
     """Classifies why a remote reachability check was skipped.
 
@@ -266,6 +280,21 @@ class GateHTTP(Gate):
 
     error: str
     retry: bool = False
+
+
+@dataclass
+class InstallOptions:
+    """User-chosen install-time toggles, set on the wizard's Options page.
+
+    Attributes:
+        desktop_shortcut: Whether to create a Desktop shortcut. Windows-only
+            - never read on Linux, which has no equivalent option.
+        run_first_scan: Whether to relaunch the freshly-installed binary
+            with --force once the wizard's Finish page closes.
+    """
+
+    desktop_shortcut: bool = True
+    run_first_scan: bool = False
 
 
 @dataclass
