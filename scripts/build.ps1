@@ -24,6 +24,11 @@ uv sync --group dev
 Write-Host "Generating icon..."
 uv run python scripts\gen-ico.py
 
+$DataArgs = @(
+    "--add-data", "$ProjectRoot\README.md;data"
+    "--add-data", "$ProjectRoot\CHANGELOG.md;data"
+)
+
 Write-Host "Building console binary (this may take a minute)..."
 uv run pyinstaller `
     --onefile `
@@ -32,6 +37,7 @@ uv run pyinstaller `
     --workpath build `
     --specpath build `
     --icon "$ProjectRoot\build\git-sentinel.ico" `
+    @DataArgs `
     --collect-submodules src.config.migrations `
     git-sentinel
 
@@ -49,6 +55,7 @@ uv run pyinstaller `
     --workpath build `
     --specpath build `
     --icon "$ProjectRoot\build\git-sentinel.ico" `
+    @DataArgs `
     --collect-submodules src.config.migrations `
     git-sentinel-gui
 

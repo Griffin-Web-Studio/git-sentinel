@@ -22,15 +22,21 @@ fi
 echo "Syncing build dependencies..."
 (cd "$SCRIPT_DIR" && uv sync --group dev)
 
-echo "Building binary (this may take a minute)..."
+DATA_ARGS=(
+  --add-data "$SCRIPT_DIR/src/data/git-sentinel.desktop:data"
+  --add-data "$SCRIPT_DIR/src/data/git-sentinel.svg:data"
+  --add-data "$SCRIPT_DIR/README.md:data"
+  --add-data "$SCRIPT_DIR/CHANGELOG.md:data"
+)
+
+echo "Building console binary (this may take a minute)..."
 (cd "$SCRIPT_DIR" && uv run pyinstaller \
   --onefile \
   --name git-sentinel \
   --distpath dist \
   --workpath build \
   --specpath build \
-  --add-data "$SCRIPT_DIR/src/data/git-sentinel.desktop:data" \
-  --add-data "$SCRIPT_DIR/src/data/git-sentinel.svg:data" \
+  "${DATA_ARGS[@]}" \
   --collect-submodules src.config.migrations \
   git-sentinel)
 
@@ -39,4 +45,21 @@ if [ ! -f "$SCRIPT_DIR/dist/git-sentinel" ]; then
   exit 1
 fi
 
-echo "Build complete → $SCRIPT_DIR/dist/git-sentinel"
+echo "Building windowed binary (this may take a minute)..."
+(cd "$SCRIPT_DIR" && uv run pyinstaller \
+  --onefile \
+  --windowed \
+  --name git-sentinel-gui \
+  --distpath dist \
+  --workpath build \
+  --specpath build \
+  "${DATA_ARGS[@]}" \
+  --collect-submodules src.config.migrations \
+  git-sentinel-gui)
+
+if [ ! -f "$SCRIPT_DIR/dist/git-sentinel-gui" ]; then
+  echo "ERROR: build failed - dist/git-sentinel-gui not found" >&2
+  exit 1
+fi
+
+echo "Build complete → $SCRIPT_DIR/dist/git-sentinel, $SCRIPT_DIR/dist/git-sentinel-gui"
