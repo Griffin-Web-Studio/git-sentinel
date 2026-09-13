@@ -105,11 +105,25 @@ def _run_scan_gui(cfg: configparser.ConfigParser) -> None:
 def _run_gui_installer(
     mode: Literal["install", "uninstall"], *, force: bool = False
 ) -> None:
-    """Run install()/uninstall() behind the windowed build's InstallerWindow."""
+    """Run install()/uninstall() behind the windowed build's wizard/window.
 
-    from .ui.gui.views.installer_window import InstallerWindow
+    install runs through the multi-page InstallWizard; uninstall keeps the
+    single-window InstallerWindow. The wizard's "Run first scan" relaunch is
+    fired only after mainloop() returns, i.e. once Tk has fully unwound the
+    closing window, so it can never race this process's own teardown.
+    """
 
-    InstallerWindow(mode, force=force).mainloop()
+    if mode == "install":
+        from .ui.gui.views.install_wizard.shell import InstallWizard
+
+        wizard = InstallWizard(force=force)
+        wizard.mainloop()
+        wizard.controller.relaunch_if_requested()
+
+    else:
+        from .ui.gui.views.installer_window import InstallerWindow
+
+        InstallerWindow().mainloop()
 
 
 def main() -> None:
