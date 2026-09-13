@@ -8,6 +8,7 @@ from pathlib import Path
 
 APP_VERSION = "0.2.1"
 APP_NAME = "git-sentinel"
+GITLAB_URL = "https://gitlab.com/griffin-web-studio/garage/git-sentinel"
 
 # ──────────────────────────────────────────────────────────| Platform paths |──
 
