@@ -10,6 +10,7 @@ from src.models import (
     BranchIssueReason,
     ConfigEntry,
     ConfigSection,
+    Confirm,
     GateHTTP,
     GateSSH,
     MsgFinish,
@@ -226,6 +227,39 @@ class TestGates:
         another."""
         a = GateSSH(url="git@github.com:user/repo.git", repo="~/a")
         b = GateSSH(url="git@github.com:user/repo.git", repo="~/b")
+        a.event.set()
+
+        assert not b.event.is_set()
+
+
+class TestConfirm:
+    """Tests Confirm event initialisation and field defaults."""
+
+    def test_event_is_threading_event_and_starts_unset(self) -> None:
+        """event is a fresh, unset threading.Event per instance."""
+        req = Confirm(prompt="Continue?", default=True)
+
+        assert isinstance(req.event, threading.Event)
+        assert not req.event.is_set()
+
+    def test_result_defaults_false(self) -> None:
+        """result defaults to False until the UI resolves the confirmation."""
+        req = Confirm(prompt="Continue?", default=True)
+
+        assert req.result is False
+
+    def test_prompt_and_default_stored(self) -> None:
+        """prompt and default are stored exactly as passed."""
+        req = Confirm(prompt="Remove data?", default=False)
+
+        assert req.prompt == "Remove data?"
+        assert req.default is False
+
+    def test_each_confirm_gets_independent_event(self) -> None:
+        """Each instance gets its own event; setting one does not affect
+        another."""
+        a = Confirm(prompt="a?", default=True)
+        b = Confirm(prompt="b?", default=True)
         a.event.set()
 
         assert not b.event.is_set()

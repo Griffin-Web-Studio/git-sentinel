@@ -53,7 +53,15 @@ def main() -> int:
 
     if not args.no_mypy:
         result = subprocess.call(
-            ["mypy", "--strict", "src/", "git-sentinel"], cwd=ROOT
+            [
+                "mypy",
+                "--strict",
+                "--scripts-are-modules",
+                "src/",
+                "git-sentinel",
+                "git-sentinel-gui",
+            ],
+            cwd=ROOT,
         )
 
         if result != 0:

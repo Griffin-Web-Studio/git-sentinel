@@ -24,7 +24,12 @@ uv sync --group dev
 Write-Host "Generating icon..."
 uv run python scripts\gen-ico.py
 
-Write-Host "Building binary (this may take a minute)..."
+$DataArgs = @(
+    "--add-data", "$ProjectRoot\README.md;data"
+    "--add-data", "$ProjectRoot\CHANGELOG.md;data"
+)
+
+Write-Host "Building console binary (this may take a minute)..."
 uv run pyinstaller `
     --onefile `
     --name git-sentinel `
@@ -32,6 +37,7 @@ uv run pyinstaller `
     --workpath build `
     --specpath build `
     --icon "$ProjectRoot\build\git-sentinel.ico" `
+    @DataArgs `
     --collect-submodules src.config.migrations `
     git-sentinel
 
@@ -40,4 +46,22 @@ if (-not (Test-Path "$ProjectRoot\dist\git-sentinel.exe")) {
     exit 1
 }
 
-Write-Host "Build complete -> $ProjectRoot\dist\git-sentinel.exe"
+Write-Host "Building windowed binary (this may take a minute)..."
+uv run pyinstaller `
+    --onefile `
+    --windowed `
+    --name git-sentinel-gui `
+    --distpath dist `
+    --workpath build `
+    --specpath build `
+    --icon "$ProjectRoot\build\git-sentinel.ico" `
+    @DataArgs `
+    --collect-submodules src.config.migrations `
+    git-sentinel-gui
+
+if (-not (Test-Path "$ProjectRoot\dist\git-sentinel-gui.exe")) {
+    Write-Error "ERROR: build failed - dist\git-sentinel-gui.exe not found"
+    exit 1
+}
+
+Write-Host "Build complete -> $ProjectRoot\dist\git-sentinel.exe, $ProjectRoot\dist\git-sentinel-gui.exe"

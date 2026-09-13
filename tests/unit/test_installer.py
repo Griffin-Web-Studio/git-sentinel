@@ -8,7 +8,6 @@ import pytest
 
 from src import APP_NAME
 from src.installer import (
-    _ask_purge,
     _current_binary,
     _install_binary,
     _install_config,
@@ -22,6 +21,25 @@ from src.installer import (
 )
 
 # ────────────────────────────────────────────────────────────────| Fixtures |──
+
+
+class RecordingReporter:
+    """Test double recording every info() call; confirm() returns a fixed
+    answer."""
+
+    def __init__(self, *, confirm: bool = True) -> None:
+        self.lines: list[str] = []
+        self._confirm = confirm
+
+    def info(self, text: str) -> None:
+        self.lines.append(text)
+
+    def confirm(self, prompt: str, default: bool) -> bool:
+        return self._confirm
+
+    @property
+    def output(self) -> str:
+        return "\n".join(str(line) for line in self.lines)
 
 
 @pytest.fixture
@@ -211,81 +229,6 @@ class TestRenderDesktop:
         assert "Categories=Utility;" in result
         assert "{exec}" not in result
         assert "{extra}" not in result
-
-
-# ──────────────────────────────────────────────────────────────| _ask_purge |──
-
-
-class TestAskPurge:
-    """Tests _ask_purge returns the correct decision across all input
-    scenarios."""
-
-    def test_non_tty_returns_false(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Non-interactive stdin always returns False without prompting.
-
-        Args:
-            monkeypatch (pytest.MonkeyPatch): Makes sys.stdin report as non-TTY.
-        """
-
-        monkeypatch.setattr(sys, "stdin", MagicMock(isatty=lambda: False))
-
-        assert _ask_purge() is False
-
-    def test_y_returns_true(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """Entering 'y' at the prompt returns True.
-
-        Args:
-            monkeypatch (pytest.MonkeyPatch): Makes stdin a TTY and patches
-                                              input to 'y'.
-        """
-
-        monkeypatch.setattr(sys, "stdin", MagicMock(isatty=lambda: True))
-        monkeypatch.setattr("builtins.input", lambda _: "y")
-
-        assert _ask_purge() is True
-
-    def test_yes_returns_true(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """Entering the full word 'yes' also returns True.
-
-        Args:
-            monkeypatch (pytest.MonkeyPatch): Makes stdin a TTY and patches
-                                              input to 'yes'.
-        """
-
-        monkeypatch.setattr(sys, "stdin", MagicMock(isatty=lambda: True))
-        monkeypatch.setattr("builtins.input", lambda _: "yes")
-
-        assert _ask_purge() is True
-
-    def test_other_input_returns_false(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Any answer other than y/yes defaults to keeping data.
-
-        Args:
-            monkeypatch (pytest.MonkeyPatch): Makes stdin a TTY and patches
-                                              input to 'n'.
-        """
-
-        monkeypatch.setattr(sys, "stdin", MagicMock(isatty=lambda: True))
-        monkeypatch.setattr("builtins.input", lambda _: "n")
-
-        assert _ask_purge() is False
-
-    def test_eof_returns_false(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """EOFError from a closed pipe is caught and returns False.
-
-        Args:
-            monkeypatch (pytest.MonkeyPatch): Makes stdin a TTY and patches
-                                              input to raise EOFError.
-        """
-
-        monkeypatch.setattr(sys, "stdin", MagicMock(isatty=lambda: True))
-        monkeypatch.setattr("builtins.input", MagicMock(side_effect=EOFError))
-
-        assert _ask_purge() is False
 
 
 # ────────────────────────────────────────────────────────────| is_installed |──

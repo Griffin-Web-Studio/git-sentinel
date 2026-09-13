@@ -75,7 +75,9 @@
 #
 #   Nightly download URLs (once a schedule has run):
 #   - $CI_API_V4_URL/projects/$CI_PROJECT_ID/packages/generic/git-sentinel/nightly/git-sentinel
+#   - $CI_API_V4_URL/projects/$CI_PROJECT_ID/packages/generic/git-sentinel/nightly/git-sentinel-gui
 #   - $CI_API_V4_URL/projects/$CI_PROJECT_ID/packages/generic/git-sentinel/nightly/git-sentinel.exe
+#   - $CI_API_V4_URL/projects/$CI_PROJECT_ID/packages/generic/git-sentinel/nightly/git-sentinel-gui.exe
 #
 #   Change detection: check:nightly downloads
 #   .../packages/generic/git-sentinel/nightly/nightly-sha.txt (the commit SHA
@@ -257,7 +259,7 @@ test:windows:
   artifacts:
     paths:
       - dist/git-sentinel
-      - dist/git-sentinel.exe
+      - dist/git-sentinel-gui
     expire_in: 1 week
 
 # ── Build jobs ────────────────────────────────────────────────────────────────
@@ -291,6 +293,7 @@ build:windows:
   artifacts:
     paths:
       - dist/git-sentinel.exe
+      - dist/git-sentinel-gui.exe
     expire_in: 1 week
   rules:
       # not on schedule
@@ -330,6 +333,15 @@ publish:release:
   rules:
     - if: $CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+/
 
+publish:linux-gui:release:
+  extends: .publish
+  needs: [build]
+  variables:
+    PACKAGE_VERSION: $CI_COMMIT_TAG
+    BINARY: git-sentinel-gui
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+/
+
 publish:windows:release:
   extends: .publish
   needs: [build:windows]
@@ -339,8 +351,17 @@ publish:windows:release:
   rules:
     - if: $CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+/
 
-# publish:nightly and publish:windows:nightly live in .gitlab/ci/nightly.yml,
-# triggered by trigger:nightly above.
+publish:windows-gui:release:
+  extends: .publish
+  needs: [build:windows]
+  variables:
+    PACKAGE_VERSION: $CI_COMMIT_TAG
+    BINARY: git-sentinel-gui.exe
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+/
+
+# publish:nightly, publish:windows:nightly, and publish:windows-gui:nightly
+# live in .gitlab/ci/nightly.yml, triggered by trigger:nightly above.
 
 # ─────────────────────────────────────────────────────────────────| Release |──
 
@@ -348,7 +369,11 @@ release:
   stage: release
   image: registry.gitlab.com/gitlab-org/release-cli:latest
   interruptible: false    # never cancel a mid-flight release
-  needs: [publish:release, publish:windows:release]
+  needs:
+    - publish:release
+    - publish:linux-gui:release
+    - publish:windows:release
+    - publish:windows-gui:release
   rules:
     - if: $CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+/
   script:
@@ -370,6 +395,12 @@ release:
         - name: "git-sentinel (Linux x86_64)"
           url: "$CI_API_V4_URL/projects/$CI_PROJECT_ID/packages/generic/$PACKAGE/$CI_COMMIT_TAG/git-sentinel"
           link_type: package
+        - name: "git-sentinel-gui (Linux x86_64, windowed)"
+          url: "$CI_API_V4_URL/projects/$CI_PROJECT_ID/packages/generic/$PACKAGE/$CI_COMMIT_TAG/git-sentinel-gui"
+          link_type: package
         - name: "git-sentinel.exe (Windows x86_64)"
           url: "$CI_API_V4_URL/projects/$CI_PROJECT_ID/packages/generic/$PACKAGE/$CI_COMMIT_TAG/git-sentinel.exe"
+          link_type: package
+        - name: "git-sentinel-gui.exe (Windows x86_64, windowed)"
+          url: "$CI_API_V4_URL/projects/$CI_PROJECT_ID/packages/generic/$PACKAGE/$CI_COMMIT_TAG/git-sentinel-gui.exe"
           link_type: package

@@ -17,6 +17,26 @@ from src.platform.linux.installer import (
     remove_launcher,
 )
 
+
+class RecordingReporter:
+    """Test double recording every info() call; confirm() returns a fixed
+    answer. Mirrors tests/unit/test_installer.py's copy (tests/unit has no
+    __init__.py, so it isn't importable as a package)."""
+
+    def __init__(self, *, confirm: bool = True) -> None:
+        self.lines: list[str] = []
+        self._confirm = confirm
+
+    def info(self, text: str) -> None:
+        self.lines.append(text)
+
+    def confirm(self, prompt: str, default: bool) -> bool:
+        return self._confirm
+
+    @property
+    def output(self) -> str:
+        return "\n".join(str(line) for line in self.lines)
+
 # ────────────────────────────────────────────────────────────────| Fixtures |──
 
 
@@ -355,18 +375,16 @@ class TestInstall:
         assert "--force" in mock_launcher.call_args[0][0]
 
     def test_force_false_prints_usage_hints(
-        self,
-        monkeypatch: pytest.MonkeyPatch,
-        capsys: pytest.CaptureFixture[str],
+        self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """When force=False, run-immediately and configure hints are printed.
+        """When force=False, run-immediately and configure hints are reported.
 
         Args:
             monkeypatch (pytest.MonkeyPatch): Sets sys.platform to 'linux'.
-            capsys (pytest.CaptureFixture[str]): Captures stdout.
         """
 
         monkeypatch.setattr(sys, "platform", "linux")
+        reporter = RecordingReporter()
 
         with (
             patch("src.installer._install_binary"),
@@ -375,12 +393,10 @@ class TestInstall:
             patch("src.platform.linux.installer.install_autostart"),
             patch("src.platform.linux.installer.install_launcher"),
         ):
-            install(force=False)
+            install(force=False, reporter=reporter)
 
-        out = capsys.readouterr().out
-
-        assert "To run immediately" in out
-        assert "To configure" in out
+        assert "To run immediately" in reporter.output
+        assert "To configure" in reporter.output
 
 
 class TestUninstall:
@@ -393,11 +409,10 @@ class TestUninstall:
         called.
 
         Args:
-            monkeypatch (pytest.MonkeyPatch): Makes _ask_purge return True.
+            monkeypatch (pytest.MonkeyPatch): Sets sys.platform to 'linux'.
         """
 
         monkeypatch.setattr(sys, "platform", "linux")
-        monkeypatch.setattr("src.installer._ask_purge", lambda: True)
 
         with (
             patch("src.platform.linux.installer.remove_autostart"),
@@ -407,7 +422,7 @@ class TestUninstall:
             patch("src.installer._remove_state") as mock_state,
             patch("src.installer._remove_binary"),
         ):
-            uninstall()
+            uninstall(reporter=RecordingReporter(confirm=True))
 
         mock_config.assert_called_once()
         mock_state.assert_called_once()
@@ -418,11 +433,10 @@ class TestUninstall:
         """On Linux with purge declined, config and state are left on disk.
 
         Args:
-            monkeypatch (pytest.MonkeyPatch): Makes _ask_purge return False.
+            monkeypatch (pytest.MonkeyPatch): Sets sys.platform to 'linux'.
         """
 
         monkeypatch.setattr(sys, "platform", "linux")
-        monkeypatch.setattr("src.installer._ask_purge", lambda: False)
 
         with (
             patch("src.platform.linux.installer.remove_autostart"),
@@ -432,7 +446,7 @@ class TestUninstall:
             patch("src.installer._remove_state") as mock_state,
             patch("src.installer._remove_binary"),
         ):
-            uninstall()
+            uninstall(reporter=RecordingReporter(confirm=False))
 
         mock_config.assert_not_called()
         mock_state.assert_not_called()

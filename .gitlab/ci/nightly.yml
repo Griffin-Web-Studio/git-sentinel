@@ -58,7 +58,7 @@ test:windows:
   artifacts:
     paths:
       - dist/git-sentinel
-      - dist/git-sentinel.exe
+      - dist/git-sentinel-gui
     expire_in: 3 days
 
 # Suffixes APP_VERSION with "-nightly.<short SHA>" before PyInstaller runs so
@@ -87,6 +87,7 @@ build:windows:nightly:
   artifacts:
     paths:
       - dist/git-sentinel.exe
+      - dist/git-sentinel-gui.exe
     expire_in: 3 days
 
 # ─────────────────────────────────────────────────| Shared publish template |──
@@ -120,9 +121,23 @@ publish:nightly:
            --upload-file nightly-sha.txt \
            "$CI_API_V4_URL/projects/$CI_PROJECT_ID/packages/generic/$PACKAGE/nightly/nightly-sha.txt"
 
+publish:linux-gui:nightly:
+  extends: .publish
+  needs: [build:nightly]
+  variables:
+    PACKAGE_VERSION: nightly
+    BINARY: git-sentinel-gui
+
 publish:windows:nightly:
   extends: .publish
   needs: [build:windows:nightly]
   variables:
     PACKAGE_VERSION: nightly
     BINARY: git-sentinel.exe
+
+publish:windows-gui:nightly:
+  extends: .publish
+  needs: [build:windows:nightly]
+  variables:
+    PACKAGE_VERSION: nightly
+    BINARY: git-sentinel-gui.exe

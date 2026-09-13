@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import argparse
+import configparser
+import shutil
 import sys
+from typing import Literal
 
 from src.config import load_config
 from src.installer import install, is_installed, uninstall
 from src.services.schedule import should_run_today
-from .ui.gui.app import GitSentinelApp
 
 from . import APP_NAME
 
@@ -23,8 +25,42 @@ def _pause_if_windows() -> None:
     pause()
 
 
-def main() -> None:
-    """Application entry point."""
+def _require_git() -> None:
+    """Exit with a friendly message if git isn't on PATH.
+
+    GitPython raises a raw ImportError deep in its own import machinery the
+    moment anything imports it without a git executable available - by the
+    time that happens it's too late to show anything but a traceback. Catch
+    the missing prerequisite before importing anything that pulls GitPython
+    in, and report it the way the GUI app would.
+    """
+
+    if shutil.which("git"):
+        return
+
+    message = (
+        f"{APP_NAME} requires Git, but it wasn't found on PATH.\n\n"
+        "Install Git from https://git-scm.com/downloads, then run "
+        f"{APP_NAME} again."
+    )
+
+    try:
+        import tkinter
+        from tkinter import messagebox
+
+        root = tkinter.Tk()
+        root.withdraw()
+        messagebox.showerror(APP_NAME, message)
+        root.destroy()
+
+    except Exception:
+        print(message, file=sys.stderr)
+
+    sys.exit(1)
+
+
+def _build_parser() -> argparse.ArgumentParser:
+    """Build the argument parser shared by both entry points."""
 
     parser = argparse.ArgumentParser(
         prog=APP_NAME,
@@ -54,7 +90,50 @@ def main() -> None:
         "then exit.",
     )
 
-    args = parser.parse_args()
+    return parser
+
+
+def _run_scan_gui(cfg: configparser.ConfigParser) -> None:
+    """Launch the Tkinter scan GUI. Identical for both binaries."""
+
+    from .ui.gui.app import GitSentinelApp
+
+    app = GitSentinelApp(cfg)
+    app.mainloop()
+
+
+def _run_gui_installer(
+    mode: Literal["install", "uninstall"], *, force: bool = False
+) -> None:
+    """Run install()/uninstall() behind the windowed build's wizard/window.
+
+    install runs through the multi-page InstallWizard; uninstall keeps the
+    single-window InstallerWindow. The wizard's "Run first scan" relaunch is
+    fired only after mainloop() returns, i.e. once Tk has fully unwound the
+    closing window, so it can never race this process's own teardown.
+    """
+
+    if mode == "install":
+        from .ui.gui.views.install_wizard.shell import InstallWizard
+
+        wizard = InstallWizard(force=force)
+        wizard.mainloop()
+        wizard.controller.relaunch_if_requested()
+
+    else:
+        from .ui.gui.views.installer_window import InstallerWindow
+
+        InstallerWindow().mainloop()
+
+
+def main() -> None:
+    """Console-subsystem entry point.
+
+    install()/uninstall()/first-run use the terminal (this binary's console
+    is never hidden - it is the intended UI for these flows).
+    """
+
+    args = _build_parser().parse_args()
 
     if args.install:
         install(force=True)
@@ -78,8 +157,38 @@ def main() -> None:
     if not should_run_today(cfg, force=args.force):
         sys.exit(0)
 
-    app = GitSentinelApp(cfg)
-    app.mainloop()
+    _require_git()
+    _run_scan_gui(cfg)
+
+
+def main_gui() -> None:
+    """Windowed-subsystem entry point.
+
+    install()/uninstall()/first-run open InstallerWindow instead of using
+    the terminal - this binary never allocates a console at all.
+    """
+
+    args = _build_parser().parse_args()
+
+    if args.install:
+        _run_gui_installer("install", force=True)
+        sys.exit(0)
+
+    if args.uninstall:
+        _run_gui_installer("uninstall")
+        sys.exit(0)
+
+    if getattr(sys, "frozen", False) and not is_installed():
+        _run_gui_installer("install")
+        sys.exit(0)
+
+    cfg = load_config()
+
+    if not should_run_today(cfg, force=args.force):
+        sys.exit(0)
+
+    _require_git()
+    _run_scan_gui(cfg)
 
 
 if __name__ == "__main__":

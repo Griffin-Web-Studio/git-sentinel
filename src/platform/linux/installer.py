@@ -23,7 +23,7 @@ ICON_FILE = ICONS_DIR / f"{APP_NAME}.svg"
 # ───────────────────────────────────────────────| Install steps (protected) |──
 
 
-def install_icon(resource: Path) -> None:
+def install_icon(resource: Path) -> str:
     """Create icons dir, and copy the icon inside.
 
     Args:
@@ -33,10 +33,10 @@ def install_icon(resource: Path) -> None:
     ICONS_DIR.mkdir(parents=True, exist_ok=True)
     shutil.copy2(str(resource), str(ICON_FILE))
 
-    print(f"Installed icon\t\t→ {ICON_FILE}")
+    return f"Installed icon\t\t→ {ICON_FILE}"
 
 
-def install_autostart(desktop_content: str) -> None:
+def install_autostart(desktop_content: str) -> str:
     """Create autostart dir, and write the autostart desktop entry.
 
     Args:
@@ -49,10 +49,10 @@ def install_autostart(desktop_content: str) -> None:
 
     AUTOSTART_FILE.write_text(desktop_content)  # write autostart desktop entry
 
-    print(f"Registered autostart\t→ {AUTOSTART_FILE}")
+    return f"Registered autostart\t→ {AUTOSTART_FILE}"
 
 
-def install_launcher(desktop_content: str) -> None:
+def install_launcher(desktop_content: str) -> str:
     """add app launcher entry into launcher
 
     Args:
@@ -63,47 +63,48 @@ def install_launcher(desktop_content: str) -> None:
 
     LAUNCHER_FILE.write_text(desktop_content)  # write launcher desktop entry
 
-    print(f"Registered launcher\t→ {LAUNCHER_FILE}")
+    return f"Registered launcher\t→ {LAUNCHER_FILE}"
 
 
 # ─────────────────────────────────────────────────────────| Uninstall steps |──
 
 
-def remove_binary() -> None:
+def remove_binary() -> str:
     """removes the binary"""
 
     BINARY_DST.unlink()
-    print(f"Removed binary\t\t→ {BINARY_DST}")
+
+    return f"Removed binary\t\t→ {BINARY_DST}"
 
 
-def remove_icon() -> None:
+def remove_icon() -> str:
     """remove icon"""
 
     if ICON_FILE.exists():
         ICON_FILE.unlink()
-        print(f"Removed icon\t\t→ {ICON_FILE}")
 
-    else:
-        print(f"Icon not found\t\t→ {ICON_FILE}  (skipping)")
+        return f"Removed icon\t\t→ {ICON_FILE}"
+
+    return f"Icon not found\t\t→ {ICON_FILE}  (skipping)"
 
 
-def remove_autostart() -> None:
+def remove_autostart() -> str:
     """remove autostart entry"""
 
     if AUTOSTART_FILE.exists():
         AUTOSTART_FILE.unlink()
-        print(f"Removed autostart\t→ {AUTOSTART_FILE}")
 
-    else:
-        print(f"Autostart not found\t→ {AUTOSTART_FILE}  (skipping)")
+        return f"Removed autostart\t→ {AUTOSTART_FILE}"
+
+    return f"Autostart not found\t→ {AUTOSTART_FILE}  (skipping)"
 
 
-def remove_launcher() -> None:
+def remove_launcher() -> str:
     """remove launcher entry"""
 
     if LAUNCHER_FILE.exists():
         LAUNCHER_FILE.unlink()
-        print(f"Removed launcher\t→ {LAUNCHER_FILE}")
 
-    else:
-        print(f"Launcher not found\t→ {LAUNCHER_FILE}  (skipping)")
+        return f"Removed launcher\t→ {LAUNCHER_FILE}"
+
+    return f"Launcher not found\t→ {LAUNCHER_FILE}  (skipping)"

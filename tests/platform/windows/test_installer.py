@@ -9,7 +9,6 @@ import pytest
 from src import APP_NAME
 from src.installer import install, uninstall
 from src.platform.windows.installer import (
-    ask_desktop_shortcut,
     create_lnk,
     install_autostart_windows,
     install_desktop_shortcut,
@@ -204,60 +203,6 @@ class TestInstallStartMenu:
         mock_lnk.assert_called_once()
 
         assert mock_lnk.call_args[0][0] == paths["start_menu_shortcut"]
-
-
-class TestAskDesktopShortcut:
-    """Tests ask_desktop_shortcut prompt behaviour."""
-
-    def test_non_tty_returns_true(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Non-interactive stdin defaults to creating the shortcut.
-
-        Args:
-            monkeypatch (pytest.MonkeyPatch): Makes sys.stdin non-TTY.
-        """
-
-        monkeypatch.setattr(sys, "stdin", MagicMock(isatty=lambda: False))
-
-        assert ask_desktop_shortcut() is True
-
-    def test_n_returns_false(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """Entering 'n' declines the Desktop shortcut.
-
-        Args:
-            monkeypatch (pytest.MonkeyPatch): Makes stdin a TTY and answers n.
-        """
-
-        monkeypatch.setattr(sys, "stdin", MagicMock(isatty=lambda: True))
-        monkeypatch.setattr("builtins.input", lambda _: "n")
-
-        assert ask_desktop_shortcut() is False
-
-    def test_empty_returns_true(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """Pressing Enter (empty answer) accepts the default Yes.
-
-        Args:
-            monkeypatch (pytest.MonkeyPatch): Makes stdin a TTY and answers
-                with an empty string.
-        """
-
-        monkeypatch.setattr(sys, "stdin", MagicMock(isatty=lambda: True))
-        monkeypatch.setattr("builtins.input", lambda _: "")
-
-        assert ask_desktop_shortcut() is True
-
-    def test_eof_returns_true(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """EOFError is caught and treated as Yes.
-
-        Args:
-            monkeypatch (pytest.MonkeyPatch): Makes stdin a TTY and raises EOF.
-        """
-
-        monkeypatch.setattr(sys, "stdin", MagicMock(isatty=lambda: True))
-        monkeypatch.setattr("builtins.input", MagicMock(side_effect=EOFError))
-
-        assert ask_desktop_shortcut() is True
 
 
 class TestInstallDesktopShortcut:
@@ -517,10 +462,11 @@ class TestInstall:
 
         mock_win_autostart = MagicMock()
         mock_start_menu = MagicMock()
-        mock_ask_desktop = MagicMock(return_value=True)
         mock_install_desktop = MagicMock()
         mock_start_menu_uninstall = MagicMock()
         mock_programs_entry = MagicMock()
+        mock_reporter = MagicMock()
+        mock_reporter.confirm.return_value = True
 
         monkeypatch.setattr(
             "src.platform.windows.installer.install_autostart_windows",
@@ -539,10 +485,6 @@ class TestInstall:
             mock_programs_entry,
         )
         monkeypatch.setattr(
-            "src.platform.windows.installer.ask_desktop_shortcut",
-            mock_ask_desktop,
-        )
-        monkeypatch.setattr(
             "src.platform.windows.installer.install_desktop_shortcut",
             mock_install_desktop,
         )
@@ -551,7 +493,7 @@ class TestInstall:
             patch("src.installer._install_binary") as mock_binary,
             patch("src.installer._install_config") as mock_config,
         ):
-            install(force=True)
+            install(force=True, reporter=mock_reporter)
 
         mock_binary.assert_called_once()
         mock_config.assert_called_once()
@@ -559,8 +501,98 @@ class TestInstall:
         mock_start_menu.assert_called_once()
         mock_start_menu_uninstall.assert_called_once()
         mock_programs_entry.assert_called_once()
-        mock_ask_desktop.assert_called_once()
+        mock_reporter.confirm.assert_called_once()
         mock_install_desktop.assert_called_once()
+
+    def test_explicit_true_bypasses_confirm(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """When create_desktop_shortcut=True is passed explicitly (the
+        wizard's Options-page checkbox), reporter.confirm() is never called
+        and the shortcut is still installed.
+
+        Args:
+            monkeypatch (pytest.MonkeyPatch): Sets sys.platform to 'win32'
+                and injects stubs for all Windows-only install functions.
+        """
+
+        monkeypatch.setattr(sys, "platform", "win32")
+
+        mock_install_desktop = MagicMock()
+        mock_reporter = MagicMock()
+
+        for name in (
+            "install_autostart_windows",
+            "install_start_menu",
+            "install_start_menu_uninstall",
+            "install_programs_entry",
+        ):
+            monkeypatch.setattr(
+                f"src.platform.windows.installer.{name}", MagicMock()
+            )
+
+        monkeypatch.setattr(
+            "src.platform.windows.installer.install_desktop_shortcut",
+            mock_install_desktop,
+        )
+
+        with (
+            patch("src.installer._install_binary"),
+            patch("src.installer._install_config"),
+        ):
+            install(
+                force=True,
+                reporter=mock_reporter,
+                create_desktop_shortcut=True,
+            )
+
+        mock_reporter.confirm.assert_not_called()
+        mock_install_desktop.assert_called_once()
+
+    def test_explicit_false_bypasses_confirm_and_skips_shortcut(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """When create_desktop_shortcut=False is passed explicitly,
+        reporter.confirm() is never called and the shortcut is not
+        installed.
+
+        Args:
+            monkeypatch (pytest.MonkeyPatch): Sets sys.platform to 'win32'
+                and injects stubs for all Windows-only install functions.
+        """
+
+        monkeypatch.setattr(sys, "platform", "win32")
+
+        mock_install_desktop = MagicMock()
+        mock_reporter = MagicMock()
+
+        for name in (
+            "install_autostart_windows",
+            "install_start_menu",
+            "install_start_menu_uninstall",
+            "install_programs_entry",
+        ):
+            monkeypatch.setattr(
+                f"src.platform.windows.installer.{name}", MagicMock()
+            )
+
+        monkeypatch.setattr(
+            "src.platform.windows.installer.install_desktop_shortcut",
+            mock_install_desktop,
+        )
+
+        with (
+            patch("src.installer._install_binary"),
+            patch("src.installer._install_config"),
+        ):
+            install(
+                force=True,
+                reporter=mock_reporter,
+                create_desktop_shortcut=False,
+            )
+
+        mock_reporter.confirm.assert_not_called()
+        mock_install_desktop.assert_not_called()
 
 
 class TestUninstall:
@@ -578,7 +610,8 @@ class TestUninstall:
         """
 
         monkeypatch.setattr(sys, "platform", "win32")
-        monkeypatch.setattr("src.installer._ask_purge", lambda: False)
+        mock_reporter = MagicMock()
+        mock_reporter.confirm.return_value = False
         mock_win_remove = MagicMock()
         mock_remove_programs = MagicMock()
         mock_remove_start_menu = MagicMock()
@@ -606,7 +639,7 @@ class TestUninstall:
         )
 
         with patch("src.installer._remove_binary"):
-            uninstall()
+            uninstall(reporter=mock_reporter)
 
         mock_win_remove.assert_called_once()
         mock_remove_programs.assert_called_once()

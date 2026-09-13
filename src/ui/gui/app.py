@@ -1,8 +1,6 @@
 from __future__ import annotations
 
 import configparser
-from collections.abc import Callable
-from typing import Any
 import tkinter as tk
 
 from src import APP_NAME, APP_VERSION
@@ -18,6 +16,7 @@ from src.models import (
     MsgProgress,
     MsgStatus,
 )
+from .threadsafe import thread_safe
 from .views.migration_dialog import show_migration_dialog
 from .views.main_window import MainWindow
 from .views.prompt_area import PromptArea
@@ -94,17 +93,13 @@ class GitSentinelApp(tk.Tk):
     def _subscribe(self) -> None:
         """Wire bus events to views via thread-safe Tkinter after() adapters."""
 
-        def thread_safe(fn: Callable[[Any], None]) -> Callable[[Any], None]:
-            def wrapper(data: Any) -> None:
-                self.after(0, lambda: fn(data))
-
-            return wrapper
-
-        self._bus.subscribe("scan.log", thread_safe(self._on_log))
-        self._bus.subscribe("scan.status", thread_safe(self._on_status))
-        self._bus.subscribe("scan.progress", thread_safe(self._on_progress))
-        self._bus.subscribe("scan.finish", thread_safe(self._on_finish))
-        self._bus.subscribe("scan.gate", thread_safe(self._on_gate))
+        self._bus.subscribe("scan.log", thread_safe(self, self._on_log))
+        self._bus.subscribe("scan.status", thread_safe(self, self._on_status))
+        self._bus.subscribe(
+            "scan.progress", thread_safe(self, self._on_progress)
+        )
+        self._bus.subscribe("scan.finish", thread_safe(self, self._on_finish))
+        self._bus.subscribe("scan.gate", thread_safe(self, self._on_gate))
 
     # ── Event handlers (main thread) ──────────────────────────────────────────
 
