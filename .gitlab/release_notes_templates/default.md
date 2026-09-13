@@ -13,22 +13,37 @@ you will find instructions for each platform:
 > Make sure you are running under a desktop environment! TUI support will come
 > in later releases.
 
+> [!NOTE]
+> Two Linux executables are provided - pick whichever suits how you plan to
+> launch it, both install/uninstall/run the exact same way otherwise:
+> - **`git-sentinel`** - install/uninstall/first-run print to whichever
+>   terminal launched it; expects to be run from a terminal.
+> - **`git-sentinel-gui`** - install/uninstall/first-run use a small window
+>   instead of the terminal. Choose this one if you'll be launching it from a
+>   file manager or app launcher rather than a terminal.
+
 **Installation:**
-1. Download the pre-compiled self-contained binary below from packages - make
-sure to choose the one marked as "Linux x86_64";
+1. Download the pre-compiled self-contained binary below from packages -
+choose "Linux x86_64" for the terminal-driven build, or "Linux x86_64,
+windowed" for the windowed build;
     ```bash
     curl -fL -o git-sentinel "https://gitlab.com/api/v4/projects/83160866/packages/generic/git-sentinel/{{TAG}}/git-sentinel"
-    # or
-    wget -O git-sentinel "https://gitlab.com/api/v4/projects/83160866/packages/generic/git-sentinel/{{TAG}}/git-sentinel"
+    # or, for the windowed build:
+    curl -fL -o git-sentinel-gui "https://gitlab.com/api/v4/projects/83160866/packages/generic/git-sentinel/{{TAG}}/git-sentinel-gui"
     ```
 2. Mark it as executable;
     ```bash
     chmod +x git-sentinel
+    # or
+    chmod +x git-sentinel-gui
     ```
-3. Run it directly from any terminal (even a TTY). This will install the
-application on your system.
+3. Run it directly - from a terminal (even a TTY) for `git-sentinel`, or by
+launching `git-sentinel-gui` from a file manager or terminal. This will
+install the application on your system.
     ```bash
     ./git-sentinel
+    # or
+    ./git-sentinel-gui
     ```
 
 **Uninstallation:**
@@ -97,7 +112,7 @@ it with `--uninstall` instead:
 **Control Panel → Programs and Features**.
 
 On first run the binary detects it is not installed and sets itself up
-automatically. To force a reinstall or update, run it with `--install`:
-`git-sentinel --install` (Linux) or `git-sentinel.exe --install` (Windows). To
-uninstall, use the same approach: `git-sentinel --uninstall` or
-`git-sentinel.exe --uninstall`.
+automatically. To force a reinstall or update, run whichever variant you
+downloaded with `--install` (e.g. `git-sentinel --install` or
+`git-sentinel-gui.exe --install`). Uninstall the same way, with `--uninstall`
+instead.
