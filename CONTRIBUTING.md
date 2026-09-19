@@ -155,7 +155,7 @@ cz bump --increment PATCH
 | `.pre`  | `check:nightly`    | schedule          | Reports whether main has moved since the last nightly build |
 | test    | `trigger:nightly`  | schedule          | Triggers the nightly child pipeline (`.gitlab/ci/nightly.yml`) |
 | test    | `test`             | commit / MR / tag | mypy strict + pytest (75 % coverage gate)         |
-| build   | `build`            | commit / MR / tag | PyInstaller binary to `dist/git-sentinel`          |
+| build   | `build`            | commit / MR / tag | Nuitka binary to `dist/git-sentinel`               |
 | publish | `publish:release`  | versioned tag     | Uploads binary to Generic Package Registry        |
 | release | `release`          | versioned tag     | Creates a GitLab Release with binary asset linked |
 
@@ -188,7 +188,7 @@ on, sidesteps that entirely.)
 Nightly binaries report a distinct version in the app window title and
 generated reports - `git-sentinel v0.2.0-nightly.<short SHA>` - so a build can
 be traced back to the exact commit it came from. `scripts/patch_nightly_version.py`
-applies this suffix to `APP_VERSION` before PyInstaller runs; it only mutates
+applies this suffix to `APP_VERSION` before Nuitka runs; it only mutates
 the CI job's checked-out worktree and is never committed.
 
 ### Tag format
