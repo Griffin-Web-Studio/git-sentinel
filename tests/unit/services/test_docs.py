@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-import sys
 from pathlib import Path
 
 import pytest
 
+import src.services.docs as docs_module
 from src.services.docs import (
     _doc_resource,
     _gitlab_anchor_slug,
@@ -31,17 +31,18 @@ class TestDocResource:
         assert result.name == "README.md"
         assert result == Path(__file__).resolve().parents[3] / "README.md"
 
-    def test_frozen_mode_uses_meipass(
+    def test_frozen_mode_uses_bundled_data_dir(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """In PyInstaller frozen mode returns _MEIPASS/data/<name>.
+        """When packaged (PyInstaller or Nuitka), returns bundle/data/<name>.
 
         Args:
-            tmp_path (Path): Used as the fake _MEIPASS extraction directory.
-            monkeypatch (pytest.MonkeyPatch): Injects _MEIPASS onto sys.
+            tmp_path (Path): Used as the fake bundle root directory.
+            monkeypatch (pytest.MonkeyPatch): Stubs frozen_data_dir() to
+                simulate either tool having bundled the app.
         """
 
-        monkeypatch.setattr(sys, "_MEIPASS", str(tmp_path), raising=False)
+        monkeypatch.setattr(docs_module, "frozen_data_dir", lambda: tmp_path)
         result = _doc_resource("README.md")
 
         assert result == tmp_path / "data" / "README.md"

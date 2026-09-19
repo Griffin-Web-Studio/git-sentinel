@@ -4,7 +4,7 @@ import shutil
 import sys
 from pathlib import Path
 
-from . import APP_NAME, CONF_DIR, STATE_DIR
+from . import APP_NAME, CONF_DIR, STATE_DIR, frozen_data_dir
 from src.config.template import render_config, wrap_comment
 from src.reporter import ConsoleReporter, Reporter
 from .models import ConfigEntry, ConfigSection
@@ -27,7 +27,7 @@ else:
 def _resource(name: str) -> Path:
     """Locate a bundled data file at runtime.
 
-    Resolves to PyInstaller's `_MEIPASS` extraction directory when frozen,
+    Resolves to the PyInstaller/Nuitka bundle's data/ subfolder when frozen,
     or src/data/ in the source tree during development.
 
     Args:
@@ -37,8 +37,10 @@ def _resource(name: str) -> Path:
         Path: Absolute path to the requested data file.
     """
 
-    if hasattr(sys, "_MEIPASS"):
-        return Path(sys._MEIPASS) / "data" / name
+    data_dir = frozen_data_dir()
+
+    if data_dir is not None:
+        return data_dir / "data" / name
 
     return Path(__file__).parent / "data" / name
 
@@ -46,6 +48,12 @@ def _resource(name: str) -> Path:
 def _current_binary() -> Path:
     """get's either normalised binary location or (in development) script entry
     point
+
+    PyInstaller sets sys.frozen and points sys.executable at the launched
+    binary. Nuitka never sets sys.frozen, and in onefile mode sys.executable
+    points at its extracted temp interpreter rather than the binary the user
+    ran - so it falls into the sys.argv[0] branch below, which is correct
+    for Nuitka and for a dev-mode script alike.
 
     Returns:
         Path: location of binary/script

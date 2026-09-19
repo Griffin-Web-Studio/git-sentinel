@@ -10,7 +10,7 @@ from src.config import load_config
 from src.installer import install, is_installed, uninstall
 from src.services.schedule import should_run_today
 
-from . import APP_NAME
+from . import APP_NAME, is_frozen
 
 # ────────────────────────────────────────────────────────────────────| Main |──
 
@@ -145,7 +145,7 @@ def main() -> None:
         _pause_if_windows()
         sys.exit(0)
 
-    if getattr(sys, "frozen", False) and not is_installed():
+    if is_frozen() and not is_installed():
         print(f"{APP_NAME}: first run detected - installing...")
         print()
         install()
@@ -178,7 +178,7 @@ def main_gui() -> None:
         _run_gui_installer("uninstall")
         sys.exit(0)
 
-    if getattr(sys, "frozen", False) and not is_installed():
+    if is_frozen() and not is_installed():
         _run_gui_installer("install")
         sys.exit(0)
 

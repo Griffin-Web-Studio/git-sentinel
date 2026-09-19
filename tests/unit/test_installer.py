@@ -6,6 +6,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
+import src.installer as installer_module
 from src import APP_NAME
 from src.installer import (
     _current_binary,
@@ -144,17 +145,20 @@ class TestResource:
         assert result.name == "settings.example.ini"
         assert result.parent.name == "data"
 
-    def test_frozen_mode_uses_meipass(
+    def test_frozen_mode_uses_bundled_data_dir(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """In PyInstaller frozen mode returns _MEIPASS/data/<name>.
+        """When packaged (PyInstaller or Nuitka), returns bundle/data/<name>.
 
         Args:
-            tmp_path (Path): Used as the fake _MEIPASS extraction directory.
-            monkeypatch (pytest.MonkeyPatch): Injects _MEIPASS onto sys.
+            tmp_path (Path): Used as the fake bundle root directory.
+            monkeypatch (pytest.MonkeyPatch): Stubs frozen_data_dir() to
+                simulate either tool having bundled the app.
         """
 
-        monkeypatch.setattr(sys, "_MEIPASS", str(tmp_path), raising=False)
+        monkeypatch.setattr(
+            installer_module, "frozen_data_dir", lambda: tmp_path
+        )
         result = _resource("settings.example.ini")
 
         assert result == tmp_path / "data" / "settings.example.ini"
@@ -185,6 +189,9 @@ class TestCurrentBinary:
 
     def test_dev_returns_argv0(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """In dev mode the resolved path of sys.argv[0] is returned.
+
+        Also covers Nuitka builds: Nuitka never sets sys.frozen, so a
+        Nuitka-compiled binary falls into this same branch.
 
         Args:
             monkeypatch (pytest.MonkeyPatch): Removes sys.frozen and sets

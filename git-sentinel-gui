@@ -3,9 +3,10 @@
 
 Identical in shape to `git-sentinel` (see that file for why it hands off via
 the full `src.__main__` path instead of the `__main__` alias) - the only
-difference is that this one calls `main_gui()`, built with PyInstaller's
-`--windowed` flag so it never allocates a console. Install/uninstall use a
-Tkinter window instead of the terminal.
+difference is that this one calls `main_gui()`, built windowed (PyInstaller's
+`--windowed`, Nuitka's `--windows-console-mode=disable`) so it never
+allocates a console. Install/uninstall use a Tkinter window instead of the
+terminal.
 """
 
 from __future__ import annotations
@@ -15,8 +16,10 @@ from pathlib import Path
 
 # Ensure the project root is on the path so `src` is importable as a package.
 # Python normally adds the *script's directory* to sys.path automatically, but
-# being explicit here also covers the PyInstaller bundle, where the extracted
-# directory is sys._MEIPASS rather than the script's original location.
+# being explicit here also covers a PyInstaller bundle, where the extracted
+# directory is sys._MEIPASS rather than the script's original location. No-op
+# for a Nuitka build, which resolves the compiled-in `src` package without
+# consulting sys.path at all.
 sys.path.insert(0, str(Path(__file__).parent))
 
 from src.__main__ import main_gui
