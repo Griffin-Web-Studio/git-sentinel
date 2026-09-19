@@ -51,7 +51,8 @@ test:windows:
   stage: build
   image: python:3.14
   before_script:
-    - apt-get update -qq && apt-get install -y -qq tk
+    # patchelf is required by Nuitka's onefile/standalone mode on Linux.
+    - apt-get update -qq && apt-get install -y -qq tk patchelf
     - pip install uv --quiet
   script:
     - bash scripts/build.sh
@@ -61,7 +62,7 @@ test:windows:
       - dist/git-sentinel-gui
     expire_in: 3 days
 
-# Suffixes APP_VERSION with "-nightly.<short SHA>" before PyInstaller runs so
+# Suffixes APP_VERSION with "-nightly.<short SHA>" before Nuitka runs so
 # the compiled binary reports e.g. "git-sentinel v0.2.0-nightly.a1b2c3d" - this
 # only mutates the CI job's worktree, never committed anywhere.
 build:nightly:
@@ -71,8 +72,9 @@ build:nightly:
     - python3 scripts/patch_nightly_version.py "$CI_COMMIT_SHORT_SHA"
   needs: [test, test:windows]
 
-# Windows build; PyInstaller auto-appends .exe on Windows. See build:nightly
-# above for the version suffixing rationale.
+# Windows build. Nuitka auto-fetches a portable MinGW64 compiler on first
+# use (--assume-yes-for-downloads in build.ps1 avoids an interactive
+# prompt). See build:nightly above for the version suffixing rationale.
 build:windows:nightly:
   stage: build
   tags:

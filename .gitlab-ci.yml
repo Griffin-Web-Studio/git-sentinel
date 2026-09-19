@@ -5,7 +5,7 @@
 #   - .pre       (implicit) checks whether main has moved since the last
 #                 nightly build
 #   - test       mypy strict + pytest (runs on every pipeline)
-#   - build      compile the PyInstaller binary
+#   - build      compile the Nuitka binary
 #   - publish    upload the binary to the Generic Package Registry
 #   - release    create a GitLab Release (tagged builds only)
 #
@@ -252,7 +252,8 @@ test:windows:
   stage: build
   image: python:3.14
   before_script:
-    - apt-get update -qq && apt-get install -y -qq tk
+    # patchelf is required by Nuitka's onefile/standalone mode on Linux.
+    - apt-get update -qq && apt-get install -y -qq tk patchelf
     - pip install uv --quiet
   script:
     - bash scripts/build.sh
@@ -280,7 +281,8 @@ build:
       # otherwise always
     - when: always
 
-# Windows build; PyInstaller auto-appends .exe on Windows.
+# Windows build. Nuitka auto-fetches a portable MinGW64 compiler on first
+# use (--assume-yes-for-downloads in build.ps1 avoids an interactive prompt).
 build:windows:
   stage: build
   tags:

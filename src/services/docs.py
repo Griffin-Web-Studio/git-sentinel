@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import re
-import sys
 from pathlib import Path
+
+from src import frozen_data_dir
 
 # ─────────────────────────────────────────────────────────────────| Resources |──
 #
@@ -22,8 +23,10 @@ def _doc_resource(name: str) -> Path:
         Path: Absolute path to the requested file.
     """
 
-    if hasattr(sys, "_MEIPASS"):
-        return Path(sys._MEIPASS) / "data" / name
+    data_dir = frozen_data_dir()
+
+    if data_dir is not None:
+        return data_dir / "data" / name
 
     return Path(__file__).resolve().parents[2] / name
 

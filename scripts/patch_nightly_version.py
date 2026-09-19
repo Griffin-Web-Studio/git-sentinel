@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Patch APP_VERSION in src/__init__.py with a nightly build suffix.
 
-Run by the GitLab CI nightly build jobs (before PyInstaller runs) so the
+Run by the GitLab CI nightly build jobs (before Nuitka runs) so the
 compiled binary reports a distinct, traceable version - e.g.
 "0.2.0-nightly.a1b2c3d" - instead of the stable release version committed to
 the repo. Only mutates the checked-out worktree used for that CI job; never

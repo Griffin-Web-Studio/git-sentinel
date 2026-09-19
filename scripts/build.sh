@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# git-sentinel build.sh - builds the PyInstaller binary into dist/git-sentinel
+# git-sentinel build.sh - builds the Nuitka binary into dist/git-sentinel
 # Run from the project root directory.
 
 set -euo pipefail
@@ -22,40 +22,45 @@ fi
 echo "Syncing build dependencies..."
 (cd "$SCRIPT_DIR" && uv sync --group dev)
 
+mkdir -p "$SCRIPT_DIR/dist"
+
 DATA_ARGS=(
-  --add-data "$SCRIPT_DIR/src/data/git-sentinel.desktop:data"
-  --add-data "$SCRIPT_DIR/src/data/git-sentinel.svg:data"
-  --add-data "$SCRIPT_DIR/README.md:data"
-  --add-data "$SCRIPT_DIR/CHANGELOG.md:data"
+  --include-data-files="$SCRIPT_DIR/src/data/git-sentinel.desktop=data/git-sentinel.desktop"
+  --include-data-files="$SCRIPT_DIR/src/data/git-sentinel.svg=data/git-sentinel.svg"
+  --include-data-files="$SCRIPT_DIR/README.md=data/README.md"
+  --include-data-files="$SCRIPT_DIR/CHANGELOG.md=data/CHANGELOG.md"
 )
 
-echo "Building console binary (this may take a minute)..."
-(cd "$SCRIPT_DIR" && uv run pyinstaller \
+echo "Building console binary (this may take a few minutes)..."
+(cd "$SCRIPT_DIR" && uv run python -m nuitka \
   --onefile \
-  --name git-sentinel \
-  --distpath dist \
-  --workpath build \
-  --specpath build \
+  --output-filename=git-sentinel \
+  --output-dir=build \
+  --enable-plugin=tk-inter \
+  --include-package=src.config.migrations \
+  --assume-yes-for-downloads \
   "${DATA_ARGS[@]}" \
-  --collect-submodules src.config.migrations \
   git-sentinel)
+
+cp "$SCRIPT_DIR/build/git-sentinel" "$SCRIPT_DIR/dist/git-sentinel"
 
 if [ ! -f "$SCRIPT_DIR/dist/git-sentinel" ]; then
   echo "ERROR: build failed - dist/git-sentinel not found" >&2
   exit 1
 fi
 
-echo "Building windowed binary (this may take a minute)..."
-(cd "$SCRIPT_DIR" && uv run pyinstaller \
+echo "Building windowed binary (this may take a few minutes)..."
+(cd "$SCRIPT_DIR" && uv run python -m nuitka \
   --onefile \
-  --windowed \
-  --name git-sentinel-gui \
-  --distpath dist \
-  --workpath build \
-  --specpath build \
+  --output-filename=git-sentinel-gui \
+  --output-dir=build \
+  --enable-plugin=tk-inter \
+  --include-package=src.config.migrations \
+  --assume-yes-for-downloads \
   "${DATA_ARGS[@]}" \
-  --collect-submodules src.config.migrations \
   git-sentinel-gui)
+
+cp "$SCRIPT_DIR/build/git-sentinel-gui" "$SCRIPT_DIR/dist/git-sentinel-gui"
 
 if [ ! -f "$SCRIPT_DIR/dist/git-sentinel-gui" ]; then
   echo "ERROR: build failed - dist/git-sentinel-gui not found" >&2
