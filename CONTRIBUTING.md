@@ -215,3 +215,10 @@ bash scripts/build.sh        # produces dist/git-sentinel
 pwsh scripts/build.ps1              # produces dist\git-sentinel.exe
 .\dist\git-sentinel.exe --help      # smoke-test the binary
 ```
+
+Python 3.14's official Windows build packs Tcl/Tk's script library into a
+zip appended directly to `DLLs\tcl90.dll`/`tcl9tk90.dll` (Tcl's zipfs),
+which Nuitka's `tk-inter` plugin can't locate on its own
+([nuitka/nuitka#3993](https://github.com/Nuitka/Nuitka/issues/3993)).
+`build.ps1` resolves the real files via `scripts/locate_tcl_tk.py` and
+passes them to Nuitka with `--tcl-library-dir`/`--tk-library-dir`.

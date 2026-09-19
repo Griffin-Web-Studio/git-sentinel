@@ -39,6 +39,9 @@ MANIFEST
 *.manifest
 *.spec
 
+# Nuitka
+nuitka-crash-report.xml
+
 # Installer logs
 pip-log.txt
 pip-delete-this-directory.txt
