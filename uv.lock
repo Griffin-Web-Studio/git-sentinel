@@ -271,6 +271,7 @@ dev = [
     { name = "black" },
     { name = "commitizen" },
     { name = "mypy" },
+    { name = "nuitka" },
     { name = "pillow" },
     { name = "pre-commit" },
     { name = "pyinstaller" },
@@ -285,6 +286,7 @@ dev = [
     { name = "black", specifier = ">=26.3.0" },
     { name = "commitizen", specifier = ">=4.16.3" },
     { name = "mypy", specifier = ">=2.1.0" },
+    { name = "nuitka", specifier = ">=2.8" },
     { name = "pillow", specifier = ">=11.0" },
     { name = "pre-commit", specifier = ">=4.5.1" },
     { name = "pyinstaller", specifier = ">=6.0" },
@@ -468,6 +470,12 @@ sdist = { url = "https://files.pythonhosted.org/packages/24/bf/d1bda4f6168e0b2e9
 wheels = [
     { url = "https://files.pythonhosted.org/packages/88/b2/d0896bdcdc8d28a7fc5717c305f1a861c26e18c05047949fb371034d98bd/nodeenv-1.10.0-py2.py3-none-any.whl", hash = "sha256:5bb13e3eed2923615535339b3c620e76779af4cb4c6a90deccc9e36b274d3827", size = 23438, upload-time = "2025-12-20T14:08:52.782Z" },
 ]
+
+[[package]]
+name = "nuitka"
+version = "4.2.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/c7/ce/38409fc853cc26d86ab71ccd53f7dfddbc7a84d4821b9b54db428b35779b/nuitka-4.2.1.tar.gz", hash = "sha256:815c6e571a7a6424af384fe9d95d4ba38f1634d39a5515e8094d7fbfa090cbcb", size = 4632551, upload-time = "2026-09-05T08:08:19.117Z" }
 
 [[package]]
 name = "packaging"

@@ -1,4 +1,4 @@
-# git-sentinel build.ps1 - builds the PyInstaller binary into
+# git-sentinel build.ps1 - builds the Nuitka binary into
 # dist\git-sentinel.exe
 # Run from the project root directory.
 
@@ -24,40 +24,46 @@ uv sync --group dev
 Write-Host "Generating icon..."
 uv run python scripts\gen-ico.py
 
+New-Item -ItemType Directory -Force -Path "$ProjectRoot\dist" | Out-Null
+
 $DataArgs = @(
-    "--add-data", "$ProjectRoot\README.md;data"
-    "--add-data", "$ProjectRoot\CHANGELOG.md;data"
+    "--include-data-files=$ProjectRoot\README.md=data/README.md"
+    "--include-data-files=$ProjectRoot\CHANGELOG.md=data/CHANGELOG.md"
 )
 
-Write-Host "Building console binary (this may take a minute)..."
-uv run pyinstaller `
+Write-Host "Building console binary (this may take a few minutes)..."
+uv run python -m nuitka `
     --onefile `
-    --name git-sentinel `
-    --distpath dist `
-    --workpath build `
-    --specpath build `
-    --icon "$ProjectRoot\build\git-sentinel.ico" `
+    --output-filename=git-sentinel.exe `
+    --output-dir=build `
+    --enable-plugin=tk-inter `
+    --include-package=src.config.migrations `
+    --assume-yes-for-downloads `
+    --windows-icon-from-ico="$ProjectRoot\build\git-sentinel.ico" `
     @DataArgs `
-    --collect-submodules src.config.migrations `
     git-sentinel
+
+Copy-Item "$ProjectRoot\build\git-sentinel.exe" "$ProjectRoot\dist\git-sentinel.exe" -Force
 
 if (-not (Test-Path "$ProjectRoot\dist\git-sentinel.exe")) {
     Write-Error "ERROR: build failed - dist\git-sentinel.exe not found"
     exit 1
 }
 
-Write-Host "Building windowed binary (this may take a minute)..."
-uv run pyinstaller `
+Write-Host "Building windowed binary (this may take a few minutes)..."
+uv run python -m nuitka `
     --onefile `
-    --windowed `
-    --name git-sentinel-gui `
-    --distpath dist `
-    --workpath build `
-    --specpath build `
-    --icon "$ProjectRoot\build\git-sentinel.ico" `
+    --output-filename=git-sentinel-gui.exe `
+    --output-dir=build `
+    --enable-plugin=tk-inter `
+    --include-package=src.config.migrations `
+    --assume-yes-for-downloads `
+    --windows-icon-from-ico="$ProjectRoot\build\git-sentinel.ico" `
+    --windows-console-mode=disable `
     @DataArgs `
-    --collect-submodules src.config.migrations `
     git-sentinel-gui
+
+Copy-Item "$ProjectRoot\build\git-sentinel-gui.exe" "$ProjectRoot\dist\git-sentinel-gui.exe" -Force
 
 if (-not (Test-Path "$ProjectRoot\dist\git-sentinel-gui.exe")) {
     Write-Error "ERROR: build failed - dist\git-sentinel-gui.exe not found"
