@@ -21,7 +21,9 @@ class TestToJsonable:
         assert to_jsonable(True) is True
 
     def test_converts_path_to_string(self) -> None:
-        assert to_jsonable(Path("/tmp/report.log")) == "/tmp/report.log"
+        path = Path("tmp") / "report.log"
+
+        assert to_jsonable(path) == str(path)
 
     def test_converts_namedtuple_via_asdict(self) -> None:
         result = to_jsonable(MsgLog("hello", "info"))
@@ -63,10 +65,11 @@ class TestToJsonable:
         }
 
     def test_converts_nested_path_in_namedtuple(self) -> None:
-        msg = MsgFinish(issue_count=1, report_path=Path("/tmp/report.log"))
+        path = Path("tmp") / "report.log"
+        msg = MsgFinish(issue_count=1, report_path=path)
         result = to_jsonable(msg)
 
-        assert result == {"issue_count": 1, "report_path": "/tmp/report.log"}
+        assert result == {"issue_count": 1, "report_path": str(path)}
 
     def test_converts_none_report_path(self) -> None:
         msg = MsgFinish(issue_count=0, report_path=None)
@@ -75,14 +78,16 @@ class TestToJsonable:
         assert result == {"issue_count": 0, "report_path": None}
 
     def test_converts_dict_recursively(self) -> None:
-        result = to_jsonable({"kind": "ssh", "path": Path("/x")})
+        path = Path("x")
+        result = to_jsonable({"kind": "ssh", "path": path})
 
-        assert result == {"kind": "ssh", "path": "/x"}
+        assert result == {"kind": "ssh", "path": str(path)}
 
     def test_converts_list_recursively(self) -> None:
-        result = to_jsonable([Path("/a"), Path("/b")])
+        a, b = Path("a"), Path("b")
+        result = to_jsonable([a, b])
 
-        assert result == ["/a", "/b"]
+        assert result == [str(a), str(b)]
 
     def test_result_is_actually_json_serialisable(self) -> None:
         req = GateSSH(url="git@example.com:repo.git", repo="~/repo")

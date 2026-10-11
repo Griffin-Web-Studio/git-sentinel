@@ -233,12 +233,18 @@ class TestOnFinish:
     def test_report_outside_home_uses_absolute_path(
         self, api: ScanWindowApi, fake_window: FakeWindow
     ) -> None:
-        report = Path("/mnt/shared/reports/report.log")
+        report = (
+            Path(Path.home().anchor)
+            / "mnt"
+            / "shared"
+            / "reports"
+            / "report.log"
+        )
         api._on_finish(MsgFinish(issue_count=1, report_path=report))
 
         payload = _last_payload(fake_window)
 
-        assert payload["location"] == " /mnt/shared/reports"
+        assert payload["location"] == f" {report.parent}"
 
 
 # ───────────────────────────────────────────────────────────────────| _on_gate |──
