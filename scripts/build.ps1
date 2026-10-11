@@ -29,6 +29,7 @@ New-Item -ItemType Directory -Force -Path "$ProjectRoot\dist" | Out-Null
 $DataArgs = @(
     "--include-data-files=$ProjectRoot\README.md=data/README.md"
     "--include-data-files=$ProjectRoot\CHANGELOG.md=data/CHANGELOG.md"
+    "--include-data-dir=$ProjectRoot\src\ui\webview\web=web"
 )
 
 # Python 3.14's official Windows build packs the Tcl/Tk script library into
@@ -62,6 +63,7 @@ uv run python -m nuitka `
     --output-filename=git-sentinel.exe `
     --output-dir=build `
     --enable-plugin=tk-inter `
+    --enable-plugin=pyside6 `
     --include-package=src.config.migrations `
     --assume-yes-for-downloads `
     --windows-icon-from-ico="$ProjectRoot\build\git-sentinel.ico" `
@@ -82,6 +84,7 @@ uv run python -m nuitka `
     --output-filename=git-sentinel-gui.exe `
     --output-dir=build `
     --enable-plugin=tk-inter `
+    --enable-plugin=pyside6 `
     --include-package=src.config.migrations `
     --assume-yes-for-downloads `
     --windows-icon-from-ico="$ProjectRoot\build\git-sentinel.ico" `

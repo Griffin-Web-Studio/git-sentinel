@@ -29,6 +29,7 @@ DATA_ARGS=(
   --include-data-files="$SCRIPT_DIR/src/data/git-sentinel.svg=data/git-sentinel.svg"
   --include-data-files="$SCRIPT_DIR/README.md=data/README.md"
   --include-data-files="$SCRIPT_DIR/CHANGELOG.md=data/CHANGELOG.md"
+  --include-data-dir="$SCRIPT_DIR/src/ui/webview/web=web"
 )
 
 echo "Building console binary (this may take a few minutes)..."
@@ -37,6 +38,7 @@ echo "Building console binary (this may take a few minutes)..."
   --output-filename=git-sentinel \
   --output-dir=build \
   --enable-plugin=tk-inter \
+  --enable-plugin=pyside6 \
   --include-package=src.config.migrations \
   --assume-yes-for-downloads \
   "${DATA_ARGS[@]}" \
@@ -55,6 +57,7 @@ echo "Building windowed binary (this may take a few minutes)..."
   --output-filename=git-sentinel-gui \
   --output-dir=build \
   --enable-plugin=tk-inter \
+  --enable-plugin=pyside6 \
   --include-package=src.config.migrations \
   --assume-yes-for-downloads \
   "${DATA_ARGS[@]}" \
