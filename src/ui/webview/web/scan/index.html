@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>git-sentinel</title>
+<link rel="stylesheet" href="../shared/theme.css" />
+<link rel="stylesheet" href="scan.css" />
+</head>
+<body>
+  <header class="header">
+    <span id="status" class="status">Initialising...</span>
+  </header>
+
+  <progress id="progress" class="progress" max="100" value="0"></progress>
+
+  <main id="log" class="log-pane"></main>
+
+  <div id="prompt-area" class="prompt-area" hidden></div>
+
+  <footer class="button-row">
+    <button id="open-report-btn" class="btn" hidden>Open Report</button>
+    <button id="close-btn" class="btn btn-primary" disabled>
+      Please wait...
+    </button>
+  </footer>
+
+  <dialog id="migration-dialog">
+    <h2>Config update available</h2>
+    <p>settings.ini has pending updates.</p>
+    <pre id="migration-steps"></pre>
+    <p>
+      Click Update to apply automatically, or Dismiss to handle it manually.
+    </p>
+    <p id="migration-conf-path" class="muted"></p>
+    <div class="button-row">
+      <button id="migration-dismiss-btn" class="btn">Dismiss</button>
+      <button id="migration-update-btn" class="btn btn-primary">
+        Update
+      </button>
+    </div>
+  </dialog>
+
+  <script src="../shared/bus.js"></script>
+  <script src="scan.js"></script>
+</body>
+</html>

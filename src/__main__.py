@@ -94,12 +94,14 @@ def _build_parser() -> argparse.ArgumentParser:
 
 
 def _run_scan_gui(cfg: configparser.ConfigParser) -> None:
-    """Launch the Tkinter scan GUI. Identical for both binaries."""
+    """Launch the scan window (pywebview). Identical for both binaries."""
 
-    from .ui.gui.app import GitSentinelApp
+    import webview
 
-    app = GitSentinelApp(cfg)
-    app.mainloop()
+    from .ui.webview.views.scan_window import create_scan_window
+
+    create_scan_window(cfg)
+    webview.start(gui="qt")
 
 
 def _run_gui_installer(
