@@ -130,6 +130,9 @@ class TestOnLoaded:
         self, api: ScanWindowApi, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         monkeypatch.setattr(
+            "src.ui.webview.views.scan_window.make_adapter", lambda: object()
+        )
+        monkeypatch.setattr(
             "src.ui.webview.views.scan_window.chain.pending",
             lambda adapter: [],
         )
@@ -155,6 +158,9 @@ class TestOnLoaded:
             to_version=1,
             description="test",
             fn=lambda cfg: None,
+        )
+        monkeypatch.setattr(
+            "src.ui.webview.views.scan_window.make_adapter", lambda: object()
         )
         monkeypatch.setattr(
             "src.ui.webview.views.scan_window.chain.pending",
