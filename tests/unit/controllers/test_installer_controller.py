@@ -352,6 +352,36 @@ class TestBeginInstall:
         assert ctrl.step is InstallStep.FINISH
         assert len(received) == 1
 
+    def test_still_finishes_when_install_raises(
+        self,
+        ctrl: InstallerController,
+        spawned: list[threading.Thread],
+        bus: EventBus,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """A raised exception is logged, not left to kill the worker thread
+        silently - closable still flips True and installer.finish still
+        fires, so the window never hangs stuck on "Please wait...".
+        """
+
+        logged: list[MsgLog] = []
+        finished: list[None] = []
+
+        bus.subscribe("installer.log", logged.append)
+        bus.subscribe("installer.finish", finished.append)
+
+        def _raise(**kw: object) -> None:
+            raise OSError("disk full")
+
+        monkeypatch.setattr("src.installer.install", _raise)
+
+        ctrl.begin_install(force=False)
+        spawned[0].join(timeout=2)
+
+        assert ctrl.closable is True
+        assert len(finished) == 1
+        assert any("disk full" in m.text for m in logged)
+
 
 # ───────────────────────────────────────────────────────────| begin_uninstall |──
 
@@ -434,6 +464,38 @@ class TestBeginUninstall:
 
         assert ctrl.closable is True
         assert len(received) == 1
+
+    def test_still_finishes_when_uninstall_raises(
+        self,
+        ctrl: InstallerController,
+        spawned: list[threading.Thread],
+        bus: EventBus,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """A raised exception is logged, not left to kill the worker thread
+        silently - closable still flips True and installer.finish still
+        fires, so the window never hangs stuck on "Please wait...". This is
+        the exact failure mode a locked/AV-scanned binary rename on Windows
+        would otherwise trigger.
+        """
+
+        logged: list[MsgLog] = []
+        finished: list[None] = []
+
+        bus.subscribe("installer.log", logged.append)
+        bus.subscribe("installer.finish", finished.append)
+
+        def _raise(**kw: object) -> None:
+            raise PermissionError("file in use")
+
+        monkeypatch.setattr("src.installer.uninstall", _raise)
+
+        ctrl.begin_uninstall()
+        spawned[0].join(timeout=2)
+
+        assert ctrl.closable is True
+        assert len(finished) == 1
+        assert any("file in use" in m.text for m in logged)
 
 
 # ───────────────────────────────────────────────────| relaunch_if_requested |──
