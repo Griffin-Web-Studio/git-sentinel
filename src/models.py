@@ -363,9 +363,9 @@ class ConfigSection:
 class AppProtocol(Protocol):
     """Interface the scan worker depends on.
 
-    GitSentinelApp satisfies this structurally - no explicit declaration needed.
-    A future TUIApp would implement the same six methods to run the scan in a
-    terminal environment without touching scan.py.
+    ScanController satisfies this structurally - no explicit declaration
+    needed. A future TUIApp would implement the same six methods to run the
+    scan in a terminal environment without touching scan.py.
     """
 
     def log(self, text: str, tag: str = "") -> None:

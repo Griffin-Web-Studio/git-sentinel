@@ -9,8 +9,6 @@ forwarded to pytest).
 from __future__ import annotations
 
 import argparse
-import os
-import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -18,26 +16,12 @@ from pathlib import Path
 ROOT = Path(__file__).parent.parent
 
 if sys.platform == "win32":
-    IGNORE = ["tests/platform/linux", "tests/unit/ui/gui"]
+    IGNORE = ["tests/platform/linux"]
     COVERAGERC = ".coveragerc.windows"
 
 else:
     IGNORE = ["tests/platform/windows"]
     COVERAGERC = ".coveragerc.linux"
-
-
-def _needs_xvfb() -> bool:
-    """True on a headless Linux CI runner with xvfb-run available.
-
-    Local dev machines have a real X/Wayland display, so this only kicks in
-    when DISPLAY is unset - e.g. the GitLab CI runner.
-    """
-
-    return (
-        sys.platform not in ("win32", "darwin")
-        and not os.environ.get("DISPLAY")
-        and shutil.which("xvfb-run") is not None
-    )
 
 
 def main() -> int:
@@ -77,9 +61,6 @@ def main() -> int:
         ]
 
     cmd += pytest_args
-
-    if _needs_xvfb():
-        cmd = ["xvfb-run", "--auto-servernum", *cmd]
 
     return subprocess.call(cmd, cwd=ROOT)
 

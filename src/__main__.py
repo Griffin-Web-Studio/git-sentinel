@@ -32,29 +32,18 @@ def _require_git() -> None:
     moment anything imports it without a git executable available - by the
     time that happens it's too late to show anything but a traceback. Catch
     the missing prerequisite before importing anything that pulls GitPython
-    in, and report it the way the GUI app would.
+    in.
     """
 
     if shutil.which("git"):
         return
 
-    message = (
+    print(
         f"{APP_NAME} requires Git, but it wasn't found on PATH.\n\n"
         "Install Git from https://git-scm.com/downloads, then run "
-        f"{APP_NAME} again."
+        f"{APP_NAME} again.",
+        file=sys.stderr,
     )
-
-    try:
-        import tkinter
-        from tkinter import messagebox
-
-        root = tkinter.Tk()
-        root.withdraw()
-        messagebox.showerror(APP_NAME, message)
-        root.destroy()
-
-    except Exception:
-        print(message, file=sys.stderr)
 
     sys.exit(1)
 

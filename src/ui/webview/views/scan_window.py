@@ -24,13 +24,13 @@ _MIN_SIZE = (680, 480)
 
 
 class ScanWindowApi:
-    """Drives the scan window's page; mirrors GitSentinelApp's role.
+    """Drives the scan window's page: the root of the scan UI.
 
     Exposed to the page as `pywebview.api`. Owns the EventBus +
-    ScanController exactly as GitSentinelApp did; EventBus messages are
-    pushed into the page via bridge.dispatch() instead of threadsafe.py's
-    after(0, ...) marshalling - pywebview's evaluate_js() is itself safe to
-    call directly from the emitting worker thread.
+    ScanController, pushing EventBus messages into the page via
+    bridge.dispatch() - pywebview's evaluate_js() is safe to call directly
+    from the emitting worker thread, so no main-thread marshalling is
+    needed.
 
     Args:
         cfg (configparser.ConfigParser): Loaded application config parser.

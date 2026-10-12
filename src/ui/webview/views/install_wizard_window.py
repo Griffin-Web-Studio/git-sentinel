@@ -20,14 +20,12 @@ _MIN_SIZE = (560, 420)
 
 
 class InstallWizardApi:
-    """Drives the install wizard's page; mirrors InstallWizard's role.
+    """Drives the install wizard's page: Welcome/Options/Installing/Finish.
 
     Exposed to the page as `pywebview.api`. Owns an EventBus +
-    InstallerController exactly as InstallWizard did. `controller` is
-    exposed publicly (unlike ScanWindowApi's fully-private one) so
-    __main__.py can call controller.relaunch_if_requested() once
-    webview.start() returns - mirroring how InstallWizard.controller was
-    public for the same reason.
+    InstallerController. `controller` is exposed publicly (unlike
+    ScanWindowApi's fully-private one) so __main__.py can call
+    controller.relaunch_if_requested() once webview.start() returns.
 
     Args:
         force (bool): Passed through to begin_install() once the user
@@ -69,8 +67,8 @@ class InstallWizardApi:
     def _render(self) -> None:
         """Push the current wizard step and its data to the page.
 
-        Mirrors InstallWizard._render(): every navigation re-sends the full
-        step state rather than relying on the page to track anything itself.
+        Every navigation re-sends the full step state rather than relying
+        on the page to track anything itself.
         """
 
         step = self.controller.step

@@ -32,42 +32,15 @@ $DataArgs = @(
     "--include-data-dir=$ProjectRoot\src\ui\webview\web=web"
 )
 
-# Python 3.14's official Windows build packs the Tcl/Tk script library into
-# a zip appended to DLLs\tcl90.dll/tcl9tk90.dll (zipfs), a layout Nuitka's
-# tk-inter plugin can't locate on its own (nuitka/nuitka#3993). Resolve the
-# real files and hand them to Nuitka directly.
-Write-Host "Locating Tcl/Tk libraries..."
-$TclTkInfo = uv run python scripts\locate_tcl_tk.py | ConvertFrom-Json
-
-$TclTkArgs = @()
-
-if ((Get-Item $TclTkInfo.tcl).PSIsContainer) {
-    $TclTkArgs += "--tcl-library-dir=$($TclTkInfo.tcl)"
-} else {
-    $TclZip = "$ProjectRoot\build\tcl_library.zip"
-    Copy-Item $TclTkInfo.tcl $TclZip -Force
-    $TclTkArgs += "--tcl-library-dir=$TclZip"
-}
-
-if ((Get-Item $TclTkInfo.tk).PSIsContainer) {
-    $TclTkArgs += "--tk-library-dir=$($TclTkInfo.tk)"
-} else {
-    $TkZip = "$ProjectRoot\build\tk_library.zip"
-    Copy-Item $TclTkInfo.tk $TkZip -Force
-    $TclTkArgs += "--tk-library-dir=$TkZip"
-}
-
 Write-Host "Building console binary (this may take a few minutes)..."
 uv run python -m nuitka `
     --onefile `
     --output-filename=git-sentinel.exe `
     --output-dir=build `
-    --enable-plugin=tk-inter `
     --enable-plugin=pyside6 `
     --include-package=src.config.migrations `
     --assume-yes-for-downloads `
     --windows-icon-from-ico="$ProjectRoot\build\git-sentinel.ico" `
-    @TclTkArgs `
     @DataArgs `
     git-sentinel
 
@@ -83,13 +56,11 @@ uv run python -m nuitka `
     --onefile `
     --output-filename=git-sentinel-gui.exe `
     --output-dir=build `
-    --enable-plugin=tk-inter `
     --enable-plugin=pyside6 `
     --include-package=src.config.migrations `
     --assume-yes-for-downloads `
     --windows-icon-from-ico="$ProjectRoot\build\git-sentinel.ico" `
     --windows-console-mode=disable `
-    @TclTkArgs `
     @DataArgs `
     git-sentinel-gui
 
