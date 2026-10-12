@@ -109,16 +109,15 @@ def _run_gui_installer(
 ) -> None:
     """Run install()/uninstall() behind the windowed build's wizard/window.
 
-    install runs through the multi-page install wizard (pywebview); uninstall
-    keeps the single-window Tkinter InstallerWindow for now. The wizard's
-    "Run first scan" relaunch is fired only after webview.start() returns,
-    i.e. once every window has closed, so it can never race this process's
-    own teardown.
+    install runs through the multi-page install wizard; uninstall through the
+    single-screen uninstall window. The wizard's "Run first scan" relaunch is
+    fired only after webview.start() returns, i.e. once every window has
+    closed, so it can never race this process's own teardown.
     """
 
-    if mode == "install":
-        import webview
+    import webview
 
+    if mode == "install":
         from .ui.webview.views.install_wizard_window import (
             create_install_wizard,
         )
@@ -128,9 +127,10 @@ def _run_gui_installer(
         api.controller.relaunch_if_requested()
 
     else:
-        from .ui.gui.views.installer_window import InstallerWindow
+        from .ui.webview.views.uninstall_window import create_uninstall_window
 
-        InstallerWindow().mainloop()
+        create_uninstall_window()
+        webview.start(gui="qt")
 
 
 def main() -> None:
@@ -171,7 +171,7 @@ def main() -> None:
 def main_gui() -> None:
     """Windowed-subsystem entry point.
 
-    install()/uninstall()/first-run open InstallerWindow instead of using
+    install()/uninstall()/first-run open their own window instead of using
     the terminal - this binary never allocates a console at all.
     """
 

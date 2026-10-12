@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>git-sentinel Setup</title>
+<link rel="stylesheet" href="../shared/theme.css" />
+<link rel="stylesheet" href="uninstall.css" />
+</head>
+<body>
+  <section id="page-confirm" class="page">
+    <header class="header">
+      <h1>Uninstall</h1>
+      <p>Remove git-sentinel from this computer.</p>
+    </header>
+    <div class="body">
+      <p>
+        Are you sure you want to uninstall git-sentinel?<br />
+        This cannot be undone.
+      </p>
+    </div>
+    <footer class="button-row">
+      <button id="confirm-cancel-btn" class="btn">Cancel</button>
+      <button id="confirm-uninstall-btn" class="btn btn-primary">
+        Uninstall
+      </button>
+    </footer>
+  </section>
+
+  <section id="page-progress" class="page" hidden>
+    <header class="header">
+      <h1>Uninstalling...</h1>
+      <p>Please wait while setup completes.</p>
+    </header>
+    <div class="body">
+      <main id="uninstall-log" class="log-pane"></main>
+    </div>
+    <footer class="button-row">
+      <button id="progress-close-btn" class="btn btn-primary" disabled>
+        Please wait...
+      </button>
+    </footer>
+  </section>
+
+  <dialog id="confirm-dialog">
+    <p id="confirm-dialog-text"></p>
+    <div class="button-row">
+      <button id="confirm-dialog-no-btn" class="btn">No</button>
+      <button id="confirm-dialog-yes-btn" class="btn btn-primary">Yes</button>
+    </div>
+  </dialog>
+
+  <script src="../shared/bus.js"></script>
+  <script src="uninstall.js"></script>
+</body>
+</html>
