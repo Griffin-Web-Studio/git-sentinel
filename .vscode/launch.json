@@ -24,6 +24,17 @@
       "django": true,
       "autoStartBrowser": false,
       "program": "${workspaceFolder}/git-sentinel"
+    },
+    {
+      "name": "Sentinel Debugger: uninstall",
+      "type": "debugpy",
+      "request": "launch",
+      "args": [
+        "--uninstall"
+      ],
+      "django": true,
+      "autoStartBrowser": false,
+      "program": "${workspaceFolder}/git-sentinel"
     }
   ]
 }
