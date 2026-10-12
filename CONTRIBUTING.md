@@ -16,9 +16,8 @@ setup, commit conventions, release process, and CI pipeline.
 
 ## Dev environment
 
-Requires: `uv`, `git`, and Python 3. Linux also requires `python3-tk` for the
-GUI; on Windows and macOS `tkinter` is bundled with Python. The devcontainer
-has everything pre-installed and is the easiest way to get started.
+Requires: `uv` and `git`. The devcontainer has everything pre-installed and
+is the easiest way to get started.
 
 ```bash
 git clone https://gitlab.com/griffin-web-studio/garage/git-sentinel.git
@@ -72,11 +71,12 @@ coverage.
 
 Coverage is tracked separately per platform via `.coveragerc.linux` and
 `.coveragerc.windows`. Linux-only code (`src/platform/linux/`) is excluded
-from the Windows coverage run and vice versa. GUI tests only run on Linux -
-Tkinter under `uv`'s venv on Windows intermittently fails to find `tk`, so
-`src/ui/gui/` is excluded from the Windows coverage run entirely rather than
-run flaky. The CI pipeline enforces a 75 % coverage floor (per platform) and
-mypy strict on every push.
+from the Windows coverage run and vice versa. GUI tests
+(`tests/unit/ui/webview/`) test the `pywebview` `js_api` classes directly
+against a `FakeWindow` double rather than driving a real native window, so
+they run identically on both platforms with no display server needed. The
+CI pipeline enforces a 75 % coverage floor (per platform) and mypy strict on
+every push.
 
 ## Commit messages
 
@@ -216,9 +216,10 @@ pwsh scripts/build.ps1              # produces dist\git-sentinel.exe
 .\dist\git-sentinel.exe --help      # smoke-test the binary
 ```
 
-Python 3.14's official Windows build packs Tcl/Tk's script library into a
-zip appended directly to `DLLs\tcl90.dll`/`tcl9tk90.dll` (Tcl's zipfs),
-which Nuitka's `tk-inter` plugin can't locate on its own
-([nuitka/nuitka#3993](https://github.com/Nuitka/Nuitka/issues/3993)).
-`build.ps1` resolves the real files via `scripts/locate_tcl_tk.py` and
-passes them to Nuitka with `--tcl-library-dir`/`--tk-library-dir`.
+The GUI is built on `pywebview`'s Qt backend (`--enable-plugin=pyside6`),
+which bundles its own QtWebEngine/Chromium rather than relying on a system
+WebKit/WebView2 install. On Linux, running the resulting binary (or the app
+directly via `uv run python -m src`) still needs a handful of small system
+X11 libraries that aren't pulled in by the Python packages themselves -
+`.devcontainer/post_create.sh` installs them automatically; see that file
+for the exact list if setting up outside the devcontainer.
