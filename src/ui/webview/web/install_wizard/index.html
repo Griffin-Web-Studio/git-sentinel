@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>git-sentinel Setup</title>
+<link rel="stylesheet" href="../shared/theme.css" />
+<link rel="stylesheet" href="wizard.css" />
+</head>
+<body>
+  <section id="page-welcome" class="page" hidden>
+    <header class="header">
+      <h1>Welcome</h1>
+      <p>This wizard will install the app on your computer.</p>
+    </header>
+    <div class="body">
+      <div id="welcome-text" class="welcome-text"></div>
+    </div>
+    <footer class="button-row">
+      <button id="welcome-cancel-btn" class="btn">Cancel</button>
+      <button id="welcome-next-btn" class="btn btn-primary">Next &gt;</button>
+    </footer>
+  </section>
+
+  <section id="page-options" class="page" hidden>
+    <header class="header">
+      <h1>Install Options</h1>
+      <p>Review the options below, then click Install.</p>
+    </header>
+    <div class="body">
+      <p>&#10003; Run automatically at login (always enabled)</p>
+      <label id="shortcut-row" hidden>
+        <input type="checkbox" id="shortcut-checkbox" />
+        Create a Desktop shortcut
+      </label>
+      <p id="no-options-text" class="muted" hidden>
+        No additional install options for Linux.
+      </p>
+    </div>
+    <footer class="button-row">
+      <button id="options-back-btn" class="btn">&lt; Previous</button>
+      <button id="options-cancel-btn" class="btn">Cancel</button>
+      <button id="options-install-btn" class="btn btn-primary">Install</button>
+    </footer>
+  </section>
+
+  <section id="page-installing" class="page" hidden>
+    <header class="header">
+      <h1>Installing...</h1>
+      <p>Please wait while setup completes.</p>
+    </header>
+    <div class="body">
+      <main id="install-log" class="log-pane"></main>
+    </div>
+  </section>
+
+  <section id="page-finish" class="page" hidden>
+    <header class="header">
+      <h1>Setup Complete</h1>
+      <p>Setup has finished installing the app.</p>
+    </header>
+    <div class="body">
+      <label>
+        <input type="checkbox" id="run-first-scan-checkbox" />
+        Run first scan now
+      </label>
+    </div>
+    <footer class="button-row">
+      <button id="release-notes-btn" class="btn push-left">
+        Release Notes
+      </button>
+      <button id="finish-btn" class="btn btn-primary">Finish</button>
+    </footer>
+  </section>
+
+  <dialog id="confirm-dialog">
+    <p id="confirm-text"></p>
+    <div class="button-row">
+      <button id="confirm-no-btn" class="btn">No</button>
+      <button id="confirm-yes-btn" class="btn btn-primary">Yes</button>
+    </div>
+  </dialog>
+
+  <script src="../shared/bus.js"></script>
+  <script src="wizard.js"></script>
+</body>
+</html>

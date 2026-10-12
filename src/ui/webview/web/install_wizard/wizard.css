@@ -1,0 +1,66 @@
+html,
+body {
+  height: 100%;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+}
+
+.page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+/* Browsers already hide [hidden] elements via the UA stylesheet, but
+   .page's own `display: flex` has equal specificity and would otherwise
+   win on source order - make the hidden case win explicitly. */
+.page[hidden] {
+  display: none;
+}
+
+.header {
+  border-bottom: 1px solid var(--border);
+  padding: 10px 16px;
+}
+
+.header h1 {
+  font-size: 15px;
+  margin: 0 0 4px;
+}
+
+.header p {
+  font-size: 12px;
+  margin: 0;
+  color: var(--muted);
+}
+
+.body {
+  flex: 1;
+  padding: 12px 16px;
+  overflow: auto;
+}
+
+.welcome-text {
+  white-space: pre-wrap;
+}
+
+.log-pane {
+  height: 100%;
+  overflow: auto;
+  font-family: var(--mono);
+  font-size: 12px;
+  border: 1px solid var(--border);
+  padding: 6px 8px;
+}
+
+.muted {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.push-left {
+  margin-right: auto;
+}

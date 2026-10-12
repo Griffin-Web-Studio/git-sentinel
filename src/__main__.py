@@ -109,18 +109,23 @@ def _run_gui_installer(
 ) -> None:
     """Run install()/uninstall() behind the windowed build's wizard/window.
 
-    install runs through the multi-page InstallWizard; uninstall keeps the
-    single-window InstallerWindow. The wizard's "Run first scan" relaunch is
-    fired only after mainloop() returns, i.e. once Tk has fully unwound the
-    closing window, so it can never race this process's own teardown.
+    install runs through the multi-page install wizard (pywebview); uninstall
+    keeps the single-window Tkinter InstallerWindow for now. The wizard's
+    "Run first scan" relaunch is fired only after webview.start() returns,
+    i.e. once every window has closed, so it can never race this process's
+    own teardown.
     """
 
     if mode == "install":
-        from .ui.gui.views.install_wizard.shell import InstallWizard
+        import webview
 
-        wizard = InstallWizard(force=force)
-        wizard.mainloop()
-        wizard.controller.relaunch_if_requested()
+        from .ui.webview.views.install_wizard_window import (
+            create_install_wizard,
+        )
+
+        api = create_install_wizard(force=force)
+        webview.start(gui="qt")
+        api.controller.relaunch_if_requested()
 
     else:
         from .ui.gui.views.installer_window import InstallerWindow
