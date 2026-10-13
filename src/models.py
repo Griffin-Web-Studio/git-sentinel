@@ -36,7 +36,7 @@ class TagIssueReason(Enum):
 class InstallStep(Enum):
     """Identifies which page of the install wizard is currently shown.
 
-    Used by InstallerController to drive the Tkinter wizard's page-swap
+    Used by InstallerController to drive the install wizard's page-swap
     logic (and, in future, a TUI's equivalent) without either view needing
     its own notion of step ordering.
     """

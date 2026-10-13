@@ -11,8 +11,10 @@ class EventBus:
     """Lightweight synchronous event bus.
 
     Subscribers are called in the emitting thread. Marshalling to a UI
-    thread (e.g. Tkinter's root.after(), Textual's app.call_from_thread()) is
-    the subscriber's responsibility.
+    thread, if the UI toolkit even needs it (pywebview's evaluate_js() is
+    safe to call directly from here; Textual's app.call_from_thread() is an
+    example of a toolkit that would need it), is the subscriber's
+    responsibility.
     """
 
     def __init__(self) -> None:

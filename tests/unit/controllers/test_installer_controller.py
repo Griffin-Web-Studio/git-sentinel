@@ -196,7 +196,8 @@ class TestSupportsDesktopShortcut:
         """Can be overridden directly, independent of the real platform.
 
         This is what makes the Windows-only Options-page checkbox testable
-        from tests/unit/ui/gui, which never runs on win32 in CI.
+        from tests/unit/ui/webview on Linux too, without needing a real
+        win32 interpreter.
         """
 
         ctrl.supports_desktop_shortcut = True

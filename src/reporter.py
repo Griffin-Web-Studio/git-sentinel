@@ -7,7 +7,7 @@ from typing import Protocol
 #
 # install()/uninstall() need to emit status lines and ask yes/no questions
 # without caring whether that happens via the terminal (console-subsystem
-# build) or a Tkinter window (windowed-subsystem build, which has no valid
+# build) or a GUI window (windowed-subsystem build, which has no valid
 # stdout/stdin to print()/input() through at all).
 
 

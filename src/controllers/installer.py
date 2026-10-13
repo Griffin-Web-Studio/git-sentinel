@@ -24,8 +24,8 @@ class InstallerController(Reporter):
     no need to route it through the bus, mirroring how ScanController.closable
     is already a plain property rather than a bus event.
 
-    No tkinter import anywhere: a future TUI view could drive this same
-    controller through the same methods/properties.
+    UI-agnostic: a future TUI view could drive this same controller through
+    the same methods/properties.
 
     Args:
         bus (EventBus): Shared EventBus that UI adapters subscribe to.
