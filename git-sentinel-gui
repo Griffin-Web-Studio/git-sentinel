@@ -5,8 +5,8 @@ Identical in shape to `git-sentinel` (see that file for why it hands off via
 the full `src.__main__` path instead of the `__main__` alias) - the only
 difference is that this one calls `main_gui()`, built windowed (PyInstaller's
 `--windowed`, Nuitka's `--windows-console-mode=disable`) so it never
-allocates a console. Install/uninstall use a Tkinter window instead of the
-terminal.
+allocates a console. Install/uninstall use a pywebview window instead of
+the terminal.
 """
 
 from __future__ import annotations
