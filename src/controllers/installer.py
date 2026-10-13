@@ -24,8 +24,8 @@ class InstallerController(Reporter):
     no need to route it through the bus, mirroring how ScanController.closable
     is already a plain property rather than a bus event.
 
-    No tkinter import anywhere: a future TUI view could drive this same
-    controller through the same methods/properties.
+    UI-agnostic: a future TUI view could drive this same controller through
+    the same methods/properties.
 
     Args:
         bus (EventBus): Shared EventBus that UI adapters subscribe to.
@@ -145,11 +145,16 @@ class InstallerController(Reporter):
         worker.start()
 
     def _run_install(self, install: Callable[..., None], force: bool) -> None:
-        install(
-            force=force,
-            reporter=self,
-            create_desktop_shortcut=self._options.desktop_shortcut,
-        )
+        try:
+            install(
+                force=force,
+                reporter=self,
+                create_desktop_shortcut=self._options.desktop_shortcut,
+            )
+
+        except Exception as exc:
+            self.info(f"ERROR: install failed: {exc}")
+
         self._finish()
 
     def begin_uninstall(self) -> None:
@@ -163,7 +168,12 @@ class InstallerController(Reporter):
         worker.start()
 
     def _run_uninstall(self, uninstall: Callable[..., None]) -> None:
-        uninstall(reporter=self)
+        try:
+            uninstall(reporter=self)
+
+        except Exception as exc:
+            self.info(f"ERROR: uninstall failed: {exc}")
+
         self._finish()
 
     def _finish(self) -> None:

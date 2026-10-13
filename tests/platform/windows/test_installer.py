@@ -16,6 +16,7 @@ from src.platform.windows.installer import (
     install_start_menu,
     install_start_menu_uninstall,
     remove_autostart_windows,
+    remove_binary,
     remove_desktop_shortcut,
     remove_programs_entry,
     remove_start_menu,
@@ -438,6 +439,83 @@ class TestRemoveProgramsEntry:
             mock_reg.DeleteKey.side_effect = FileNotFoundError
 
             remove_programs_entry()  # must not raise
+
+
+class TestRemoveBinary:
+    """Tests remove_binary renames the running exe and schedules its
+    deletion, working around Windows' running-exe file lock."""
+
+    def test_renames_running_exe_to_pending_path(
+        self, paths: dict[str, Path]
+    ) -> None:
+        """The binary is renamed, not deleted directly - deleting a running
+        exe fails on Windows, renaming it does not.
+
+        Args:
+            paths (dict[str, Path]): Fixture redirecting installer paths.
+        """
+
+        paths["binary_dst"].parent.mkdir(parents=True, exist_ok=True)
+        paths["binary_dst"].write_bytes(b"binary")
+
+        with patch("src.platform.windows.installer.subprocess.Popen"):
+            remove_binary()
+
+        pending = paths["binary_dst"].with_name(
+            paths["binary_dst"].stem + ".uninstalling.exe"
+        )
+
+        assert not paths["binary_dst"].exists()
+        assert pending.exists()
+
+    def test_clears_a_stale_pending_file_first(
+        self, paths: dict[str, Path]
+    ) -> None:
+        """A leftover .uninstalling.exe from a previous interrupted
+        uninstall (e.g. the window was force-closed before its cleanup
+        script ran) doesn't collide with this rename (WinError 183).
+
+        Args:
+            paths (dict[str, Path]): Fixture redirecting installer paths.
+        """
+
+        paths["binary_dst"].parent.mkdir(parents=True, exist_ok=True)
+        paths["binary_dst"].write_bytes(b"new binary")
+
+        pending = paths["binary_dst"].with_name(
+            paths["binary_dst"].stem + ".uninstalling.exe"
+        )
+        pending.write_bytes(b"orphaned from a previous attempt")
+
+        with patch("src.platform.windows.installer.subprocess.Popen"):
+            remove_binary()  # must not raise WinError 183 / FileExistsError
+
+        assert pending.read_bytes() == b"new binary"
+
+    def test_spawns_detached_powershell_targeting_pending_path(
+        self, paths: dict[str, Path]
+    ) -> None:
+        """A detached PowerShell process is spawned to delete the renamed
+        file once this process exits.
+
+        Args:
+            paths (dict[str, Path]): Fixture redirecting installer paths.
+        """
+
+        paths["binary_dst"].parent.mkdir(parents=True, exist_ok=True)
+        paths["binary_dst"].write_bytes(b"binary")
+
+        with patch(
+            "src.platform.windows.installer.subprocess.Popen"
+        ) as mock_popen:
+            remove_binary()
+
+        cmd = mock_popen.call_args[0][0]
+        script = cmd[-1]
+
+        assert cmd[0] == "powershell"
+        assert ".uninstalling.exe" in script
+        assert str(paths["bin_dir"]) in script
 
 
 # ──────────────────────────────────────────────────────────────| Public API |──

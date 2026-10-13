@@ -36,7 +36,7 @@ class TagIssueReason(Enum):
 class InstallStep(Enum):
     """Identifies which page of the install wizard is currently shown.
 
-    Used by InstallerController to drive the Tkinter wizard's page-swap
+    Used by InstallerController to drive the install wizard's page-swap
     logic (and, in future, a TUI's equivalent) without either view needing
     its own notion of step ordering.
     """
@@ -363,9 +363,9 @@ class ConfigSection:
 class AppProtocol(Protocol):
     """Interface the scan worker depends on.
 
-    GitSentinelApp satisfies this structurally - no explicit declaration needed.
-    A future TUIApp would implement the same six methods to run the scan in a
-    terminal environment without touching scan.py.
+    ScanController satisfies this structurally - no explicit declaration
+    needed. A future TUIApp would implement the same six methods to run the
+    scan in a terminal environment without touching scan.py.
     """
 
     def log(self, text: str, tag: str = "") -> None:

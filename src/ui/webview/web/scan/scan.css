@@ -1,0 +1,74 @@
+html,
+body {
+  height: 100%;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+}
+
+.header {
+  padding: 10px 12px 2px;
+}
+
+.status {
+  font-weight: bold;
+  display: block;
+}
+
+.progress {
+  width: calc(100% - 20px);
+  margin: 4px 10px;
+  height: 8px;
+}
+
+.log-pane {
+  flex: 1;
+  margin: 2px 10px;
+  padding: 6px 8px;
+  overflow: auto;
+  border: 1px solid var(--border);
+  font-family: var(--mono);
+  font-size: 12px;
+  white-space: pre-wrap;
+}
+
+.log-pane div.log-error {
+  color: var(--error);
+}
+
+.log-pane div.log-warning {
+  color: var(--warning);
+}
+
+.log-pane div.log-info {
+  color: var(--info);
+}
+
+.prompt-area {
+  margin: 2px 10px;
+}
+
+.gate-banner {
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 8px 10px;
+}
+
+.gate-banner pre {
+  font-family: var(--mono);
+  font-size: 12px;
+  white-space: pre-wrap;
+}
+
+.muted {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+#migration-steps {
+  font-family: var(--mono);
+  font-size: 12px;
+  white-space: pre-wrap;
+}

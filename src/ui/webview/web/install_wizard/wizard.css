@@ -1,0 +1,11 @@
+.welcome-text {
+  white-space: pre-wrap;
+}
+
+.log-pane {
+  height: 100%;
+}
+
+.push-left {
+  margin-right: auto;
+}

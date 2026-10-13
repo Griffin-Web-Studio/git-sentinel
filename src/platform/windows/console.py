@@ -6,7 +6,7 @@ from __future__ import annotations
 # used to live here are gone: the console-subsystem build now always shows
 # its console (that's the point of it), and the windowed-subsystem build
 # never allocates one to hide in the first place. See git-sentinel-gui and
-# src/ui/gui/views/installer_window.py.
+# src/ui/webview/views/uninstall_window.py.
 
 
 def pause() -> None:

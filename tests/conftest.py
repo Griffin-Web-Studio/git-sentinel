@@ -8,7 +8,7 @@ import sys
 # tests that assert POSIX-only behaviour (chmod bits, socket permissions) on
 # Windows or vice versa.
 if sys.platform == "win32":
-    collect_ignore_glob = ["platform/linux/*", "unit/ui/gui/*"]
+    collect_ignore_glob = ["platform/linux/*"]
 
 else:
     collect_ignore_glob = ["platform/windows/*"]

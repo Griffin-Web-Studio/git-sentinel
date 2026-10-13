@@ -184,6 +184,13 @@ def remove_binary() -> str:
     # immediately), then let a detached cmd script delete the renamed
     # copy and the now-empty directory once this process exits.
     pending = BINARY_DST.with_name(BINARY_DST.stem + ".uninstalling.exe")
+
+    # A previous uninstall may have renamed to this same path and been
+    # interrupted before its cleanup script ran (e.g. the window was force
+    # -closed) - clear the orphan first so this rename doesn't collide
+    # with it (WinError 183).
+    pending.unlink(missing_ok=True)
+
     BINARY_DST.rename(pending)
 
     # PowerShell with -WindowStyle Hidden + CREATE_NO_WINDOW is fully

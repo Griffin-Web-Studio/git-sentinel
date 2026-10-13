@@ -32,29 +32,18 @@ def _require_git() -> None:
     moment anything imports it without a git executable available - by the
     time that happens it's too late to show anything but a traceback. Catch
     the missing prerequisite before importing anything that pulls GitPython
-    in, and report it the way the GUI app would.
+    in.
     """
 
     if shutil.which("git"):
         return
 
-    message = (
+    print(
         f"{APP_NAME} requires Git, but it wasn't found on PATH.\n\n"
         "Install Git from https://git-scm.com/downloads, then run "
-        f"{APP_NAME} again."
+        f"{APP_NAME} again.",
+        file=sys.stderr,
     )
-
-    try:
-        import tkinter
-        from tkinter import messagebox
-
-        root = tkinter.Tk()
-        root.withdraw()
-        messagebox.showerror(APP_NAME, message)
-        root.destroy()
-
-    except Exception:
-        print(message, file=sys.stderr)
 
     sys.exit(1)
 
@@ -94,12 +83,14 @@ def _build_parser() -> argparse.ArgumentParser:
 
 
 def _run_scan_gui(cfg: configparser.ConfigParser) -> None:
-    """Launch the Tkinter scan GUI. Identical for both binaries."""
+    """Launch the scan window (pywebview). Identical for both binaries."""
 
-    from .ui.gui.app import GitSentinelApp
+    import webview
 
-    app = GitSentinelApp(cfg)
-    app.mainloop()
+    from .ui.webview.views.scan_window import create_scan_window
+
+    create_scan_window(cfg)
+    webview.start(gui="qt")
 
 
 def _run_gui_installer(
@@ -107,23 +98,28 @@ def _run_gui_installer(
 ) -> None:
     """Run install()/uninstall() behind the windowed build's wizard/window.
 
-    install runs through the multi-page InstallWizard; uninstall keeps the
-    single-window InstallerWindow. The wizard's "Run first scan" relaunch is
-    fired only after mainloop() returns, i.e. once Tk has fully unwound the
-    closing window, so it can never race this process's own teardown.
+    install runs through the multi-page install wizard; uninstall through the
+    single-screen uninstall window. The wizard's "Run first scan" relaunch is
+    fired only after webview.start() returns, i.e. once every window has
+    closed, so it can never race this process's own teardown.
     """
 
-    if mode == "install":
-        from .ui.gui.views.install_wizard.shell import InstallWizard
+    import webview
 
-        wizard = InstallWizard(force=force)
-        wizard.mainloop()
-        wizard.controller.relaunch_if_requested()
+    if mode == "install":
+        from .ui.webview.views.install_wizard_window import (
+            create_install_wizard,
+        )
+
+        api = create_install_wizard(force=force)
+        webview.start(gui="qt")
+        api.controller.relaunch_if_requested()
 
     else:
-        from .ui.gui.views.installer_window import InstallerWindow
+        from .ui.webview.views.uninstall_window import create_uninstall_window
 
-        InstallerWindow().mainloop()
+        create_uninstall_window()
+        webview.start(gui="qt")
 
 
 def main() -> None:
@@ -164,7 +160,7 @@ def main() -> None:
 def main_gui() -> None:
     """Windowed-subsystem entry point.
 
-    install()/uninstall()/first-run open InstallerWindow instead of using
+    install()/uninstall()/first-run open their own window instead of using
     the terminal - this binary never allocates a console at all.
     """
 
