@@ -246,9 +246,24 @@ test:windows:
 .build:
   stage: build
   image: python:3.14
+  variables:
+    # Unlike the Windows build runner (a persistent self-hosted machine),
+    # this job runs in a fresh container every time, so Nuitka's own cache
+    # and ccache's compiled-object cache (which Nuitka's Scons backend
+    # auto-detects and wraps gcc with) both start empty on every single
+    # build - redirect them into the project dir so the `cache:` key below
+    # can actually persist them across pipeline runs.
+    NUITKA_CACHE_DIR: $CI_PROJECT_DIR/.nuitka-cache
+    CCACHE_DIR: $CI_PROJECT_DIR/.ccache
+  cache:
+    key: nuitka-linux
+    paths:
+      - .nuitka-cache/
+      - .ccache/
   before_script:
-    # patchelf is required by Nuitka's onefile/standalone mode on Linux.
-    - apt-get update -qq && apt-get install -y -qq patchelf
+    # patchelf is required by Nuitka's onefile/standalone mode on Linux;
+    # ccache lets repeat builds skip recompiling unchanged C files.
+    - apt-get update -qq && apt-get install -y -qq patchelf ccache
     - pip install uv --quiet
   script:
     - bash scripts/build.sh

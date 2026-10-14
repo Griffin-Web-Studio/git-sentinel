@@ -49,9 +49,21 @@ test:windows:
 .build:
   stage: build
   image: python:3.14
+  variables:
+    # Same cache strategy as the regular `build` job in .gitlab-ci.yml - see
+    # the comment there. Same cache key too, so nightly and MR builds share
+    # one warm Nuitka/ccache cache instead of each maintaining its own.
+    NUITKA_CACHE_DIR: $CI_PROJECT_DIR/.nuitka-cache
+    CCACHE_DIR: $CI_PROJECT_DIR/.ccache
+  cache:
+    key: nuitka-linux
+    paths:
+      - .nuitka-cache/
+      - .ccache/
   before_script:
-    # patchelf is required by Nuitka's onefile/standalone mode on Linux.
-    - apt-get update -qq && apt-get install -y -qq patchelf
+    # patchelf is required by Nuitka's onefile/standalone mode on Linux;
+    # ccache lets repeat builds skip recompiling unchanged C files.
+    - apt-get update -qq && apt-get install -y -qq patchelf ccache
     - pip install uv --quiet
   script:
     - bash scripts/build.sh
