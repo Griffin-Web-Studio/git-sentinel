@@ -337,6 +337,8 @@ class TestCheckLocalState:
             repo (git.Repo): Fixture providing a repo (path used only).
         """
         mock_repo = MagicMock()
+        mock_repo.__enter__.return_value = mock_repo
+        mock_repo.__exit__.return_value = False
         mock_repo.git.status.return_value = ""
         mock_repo.git.stash.side_effect = git.GitCommandError("stash", 128)
         with patch("src.services.git_ops.git.Repo", return_value=mock_repo):
@@ -404,6 +406,8 @@ class TestCheckStale:
             repo (git.Repo): Fixture providing a repo (path used only).
         """
         mock_repo = MagicMock()
+        mock_repo.__enter__.return_value = mock_repo
+        mock_repo.__exit__.return_value = False
         mock_repo.git.log.return_value = ""
         with patch("src.services.git_ops.git.Repo", return_value=mock_repo):
             stale, last = check_stale(Path(repo.working_dir), threshold_days=30)

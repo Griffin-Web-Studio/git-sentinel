@@ -105,9 +105,11 @@ def get_remotes(repo: Path) -> dict[str, str]:
     """
     try:
         r = git.Repo(repo)
-        return {remote.name: remote.url for remote in r.remotes}
     except git.InvalidGitRepositoryError, git.NoSuchPathError:
         return {}
+
+    with r:
+        return {remote.name: remote.url for remote in r.remotes}
 
 
 def check_local_state(repo: Path) -> tuple[list[str], list[str], list[str]]:
@@ -129,25 +131,26 @@ def check_local_state(repo: Path) -> tuple[list[str], list[str], list[str]]:
     except git.InvalidGitRepositoryError, git.NoSuchPathError:
         return [], [], []
 
-    uncommitted: list[str] = []
-    untracked: list[str] = []
+    with r:
+        uncommitted: list[str] = []
+        untracked: list[str] = []
 
-    status = r.git.status("--porcelain")
-    for line in (status.splitlines() if status else []):
-        xy = line[:2]
-        path = line[3:].strip()
-        if xy == "??":
-            untracked.append(path)
-        elif xy.strip():
-            uncommitted.append(f"{xy}  {path}")
+        status = r.git.status("--porcelain")
+        for line in (status.splitlines() if status else []):
+            xy = line[:2]
+            path = line[3:].strip()
+            if xy == "??":
+                untracked.append(path)
+            elif xy.strip():
+                uncommitted.append(f"{xy}  {path}")
 
-    try:
-        stash_text = r.git.stash("list")
-        stashes = stash_text.splitlines() if stash_text else []
-    except git.GitCommandError:
-        stashes = []
+        try:
+            stash_text = r.git.stash("list")
+            stashes = stash_text.splitlines() if stash_text else []
+        except git.GitCommandError:
+            stashes = []
 
-    return uncommitted, untracked, stashes
+        return uncommitted, untracked, stashes
 
 
 def check_stale(
@@ -164,12 +167,12 @@ def check_stale(
             last_commit_datetime is None if the repository has no commits.
     """
     try:
-        r = git.Repo(repo)
-        out = r.git.log("--all", "--format=%ct", "-1")
-        if not out:
-            return False, None
-        last = datetime.fromtimestamp(int(out.strip()))
-        return (datetime.now() - last).days >= threshold_days, last
+        with git.Repo(repo) as r:
+            out = r.git.log("--all", "--format=%ct", "-1")
+            if not out:
+                return False, None
+            last = datetime.fromtimestamp(int(out.strip()))
+            return (datetime.now() - last).days >= threshold_days, last
     except (
         git.InvalidGitRepositoryError,
         git.NoSuchPathError,
@@ -195,18 +198,19 @@ def get_local_branches(repo: Path) -> list[BranchInfo]:
     except git.InvalidGitRepositoryError, git.NoSuchPathError:
         return []
 
-    branches: list[BranchInfo] = []
-    for head in r.heads:
-        tracking = head.tracking_branch()
-        branches.append(
-            {
-                "name": head.name,
-                "sha": head.commit.hexsha,
-                "upstream": tracking.name if tracking else "",
-                "ahead": 0,
-            }
-        )
-    return branches
+    with r:
+        branches: list[BranchInfo] = []
+        for head in r.heads:
+            tracking = head.tracking_branch()
+            branches.append(
+                {
+                    "name": head.name,
+                    "sha": head.commit.hexsha,
+                    "upstream": tracking.name if tracking else "",
+                    "ahead": 0,
+                }
+            )
+        return branches
 
 
 def get_local_tags(repo: Path) -> list[str]:
@@ -220,8 +224,8 @@ def get_local_tags(repo: Path) -> list[str]:
             git repository or no tags exist.
     """
     try:
-        r = git.Repo(repo)
-        return [tag.name for tag in r.tags]
+        with git.Repo(repo) as r:
+            return [tag.name for tag in r.tags]
     except git.InvalidGitRepositoryError, git.NoSuchPathError:
         return []
 
@@ -237,9 +241,9 @@ def _count_commits(repo: Path, spec: str) -> int:
         int: Number of matching commits, or 0 on any error.
     """
     try:
-        r = git.Repo(repo)
-        out = r.git.rev_list("--count", spec)
-        return max(0, int(out.strip()))
+        with git.Repo(repo) as r:
+            out = r.git.rev_list("--count", spec)
+            return max(0, int(out.strip()))
     except (
         git.InvalidGitRepositoryError,
         git.NoSuchPathError,
