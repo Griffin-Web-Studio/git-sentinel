@@ -342,7 +342,7 @@ dev = [
     { name = "black", specifier = ">=26.3.0" },
     { name = "commitizen", specifier = ">=4.16.3" },
     { name = "mypy", specifier = ">=2.1.0" },
-    { name = "nuitka", specifier = ">=2.8" },
+    { name = "nuitka", specifier = ">=4.3" },
     { name = "pillow", specifier = ">=11.0" },
     { name = "pre-commit", specifier = ">=4.5.1" },
     { name = "pyinstaller", specifier = ">=6.0" },
@@ -529,9 +529,9 @@ wheels = [
 
 [[package]]
 name = "nuitka"
-version = "4.2.1"
+version = "4.3"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/c7/ce/38409fc853cc26d86ab71ccd53f7dfddbc7a84d4821b9b54db428b35779b/nuitka-4.2.1.tar.gz", hash = "sha256:815c6e571a7a6424af384fe9d95d4ba38f1634d39a5515e8094d7fbfa090cbcb", size = 4632551, upload-time = "2026-09-05T08:08:19.117Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/fa/5f/ba7cb858da0c98c24f85c54454a5ea18f2b784f658a91531fa051b2f2ee9/nuitka-4.3.tar.gz", hash = "sha256:8b102c6bf30d9504e82e69674d396972729092b25cefa680e8fd05678fdfa30b", size = 4766934, upload-time = "2026-10-10T11:13:15.577Z" }
 
 [[package]]
 name = "packaging"
