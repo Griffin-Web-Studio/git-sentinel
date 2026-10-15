@@ -6,6 +6,18 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
+# Which binary/binaries to build: console, gui, or all (default - used by
+# local/CONTRIBUTING.md runs). CI passes "console" or "gui" explicitly so the
+# two can build as separate, parallel jobs.
+TARGET="${1:-all}"
+case "$TARGET" in
+  console | gui | all) ;;
+  *)
+    echo "ERROR: unknown target '$TARGET' (expected console, gui, or all)" >&2
+    exit 1
+    ;;
+esac
+
 if ! command -v uv &>/dev/null; then
   echo "ERROR: uv is not installed." >&2
   echo "       Install it from: https://docs.astral.sh/uv/getting-started/installation/" >&2
@@ -32,40 +44,44 @@ DATA_ARGS=(
   --include-data-dir="$SCRIPT_DIR/src/ui/webview/web=web"
 )
 
-echo "Building console binary (this may take a few minutes)..."
-(cd "$SCRIPT_DIR" && uv run python -m nuitka \
-  --onefile \
-  --output-filename=git-sentinel \
-  --output-dir=build \
-  --enable-plugin=pyside6 \
-  --include-package=src.config.migrations \
-  --assume-yes-for-downloads \
-  "${DATA_ARGS[@]}" \
-  git-sentinel)
+if [[ "$TARGET" == "console" || "$TARGET" == "all" ]]; then
+  echo "Building console binary (this may take a few minutes)..."
+  (cd "$SCRIPT_DIR" && uv run python -m nuitka \
+    --onefile \
+    --output-filename=git-sentinel \
+    --output-dir=build \
+    --enable-plugin=pyside6 \
+    --include-package=src.config.migrations \
+    --assume-yes-for-downloads \
+    "${DATA_ARGS[@]}" \
+    git-sentinel)
 
-cp "$SCRIPT_DIR/build/git-sentinel" "$SCRIPT_DIR/dist/git-sentinel"
+  cp "$SCRIPT_DIR/build/git-sentinel" "$SCRIPT_DIR/dist/git-sentinel"
 
-if [ ! -f "$SCRIPT_DIR/dist/git-sentinel" ]; then
-  echo "ERROR: build failed - dist/git-sentinel not found" >&2
-  exit 1
+  if [ ! -f "$SCRIPT_DIR/dist/git-sentinel" ]; then
+    echo "ERROR: build failed - dist/git-sentinel not found" >&2
+    exit 1
+  fi
 fi
 
-echo "Building windowed binary (this may take a few minutes)..."
-(cd "$SCRIPT_DIR" && uv run python -m nuitka \
-  --onefile \
-  --output-filename=git-sentinel-gui \
-  --output-dir=build \
-  --enable-plugin=pyside6 \
-  --include-package=src.config.migrations \
-  --assume-yes-for-downloads \
-  "${DATA_ARGS[@]}" \
-  git-sentinel-gui)
+if [[ "$TARGET" == "gui" || "$TARGET" == "all" ]]; then
+  echo "Building windowed binary (this may take a few minutes)..."
+  (cd "$SCRIPT_DIR" && uv run python -m nuitka \
+    --onefile \
+    --output-filename=git-sentinel-gui \
+    --output-dir=build \
+    --enable-plugin=pyside6 \
+    --include-package=src.config.migrations \
+    --assume-yes-for-downloads \
+    "${DATA_ARGS[@]}" \
+    git-sentinel-gui)
 
-cp "$SCRIPT_DIR/build/git-sentinel-gui" "$SCRIPT_DIR/dist/git-sentinel-gui"
+  cp "$SCRIPT_DIR/build/git-sentinel-gui" "$SCRIPT_DIR/dist/git-sentinel-gui"
 
-if [ ! -f "$SCRIPT_DIR/dist/git-sentinel-gui" ]; then
-  echo "ERROR: build failed - dist/git-sentinel-gui not found" >&2
-  exit 1
+  if [ ! -f "$SCRIPT_DIR/dist/git-sentinel-gui" ]; then
+    echo "ERROR: build failed - dist/git-sentinel-gui not found" >&2
+    exit 1
+  fi
 fi
 
-echo "Build complete → $SCRIPT_DIR/dist/git-sentinel, $SCRIPT_DIR/dist/git-sentinel-gui"
+echo "Build complete → $SCRIPT_DIR/dist"

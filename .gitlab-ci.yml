@@ -265,20 +265,55 @@ test:windows:
     # ccache lets repeat builds skip recompiling unchanged C files.
     - apt-get update -qq && apt-get install -y -qq patchelf ccache
     - pip install uv --quiet
-  script:
-    - bash scripts/build.sh
   artifacts:
-    paths:
-      - dist/git-sentinel
-      - dist/git-sentinel-gui
     expire_in: 1 week
 
 # ── Build jobs ────────────────────────────────────────────────────────────────
+#
+# Console and windowed binaries build as separate jobs (per platform) so they
+# run in parallel instead of one job building both sequentially - the Linux
+# build in particular is slow enough per binary that this roughly halves the
+# build stage's wall-clock time.
+#
+# DISABLE_TUI_BUILD (CI/CD variable, Settings > CI/CD > Variables - unset by
+# default) is a kill switch for the console/TUI binary specifically: set it
+# to the literal string "true" to stop building and publishing
+# git-sentinel/git-sentinel.exe without touching this file. The windowed
+# binary is unaffected either way.
 
-# Skipped on scheduled pipelines (build:nightly handles those) and on test:
-# commits (no binary needed when only tests changed).
+# Skipped on scheduled pipelines (build:nightly handles those), on test:
+# commits (no binary needed when only tests changed), and when
+# DISABLE_TUI_BUILD is set.
 build:
   extends: .build
+  script:
+    - bash scripts/build.sh console
+  artifacts:
+    paths:
+      - dist/git-sentinel
+  rules:
+      # not on schedule
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+      when: never
+
+      # not when commit type is test
+    - if: $CI_COMMIT_MESSAGE =~ /^test(\(.+\))?!?:/
+      when: never
+
+      # not when the TUI build is disabled
+    - if: $DISABLE_TUI_BUILD == "true"
+      when: never
+
+      # otherwise always
+    - when: always
+
+build:linux-gui:
+  extends: .build
+  script:
+    - bash scripts/build.sh gui
+  artifacts:
+    paths:
+      - dist/git-sentinel-gui
   rules:
       # not on schedule
     - if: $CI_PIPELINE_SOURCE == "schedule"
@@ -291,20 +326,46 @@ build:
       # otherwise always
     - when: always
 
-# Windows build. Nuitka auto-fetches a portable MinGW64 compiler on first
+# Windows builds. Nuitka auto-fetches a portable MinGW64 compiler on first
 # use (--assume-yes-for-downloads in build.ps1 avoids an interactive prompt).
-build:windows:
+.build:windows:
   stage: build
   tags:
     - windows
   before_script:
     - pip install uv --quiet
-  script:
     - uv sync --frozen --group dev
-    - pwsh scripts/build.ps1
+
+build:windows:
+  extends: .build:windows
+  script:
+    - pwsh scripts/build.ps1 console
   artifacts:
     paths:
       - dist/git-sentinel.exe
+    expire_in: 1 week
+  rules:
+      # not on schedule
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+      when: never
+
+      # not when commit type is test
+    - if: $CI_COMMIT_MESSAGE =~ /^test(\(.+\))?!?:/
+      when: never
+
+      # not when the TUI build is disabled
+    - if: $DISABLE_TUI_BUILD == "true"
+      when: never
+
+      # otherwise always
+    - when: always
+
+build:windows-gui:
+  extends: .build:windows
+  script:
+    - pwsh scripts/build.ps1 gui
+  artifacts:
+    paths:
       - dist/git-sentinel-gui.exe
     expire_in: 1 week
   rules:
@@ -339,15 +400,18 @@ build:windows:
 
 publish:release:
   extends: .publish
-  needs: [build]
+  needs:
+    - job: build
+      optional: true
   variables:
     PACKAGE_VERSION: $CI_COMMIT_TAG
   rules:
-    - if: $CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+/
+      # skipped along with build when the TUI binary is disabled
+    - if: $CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+/ && $DISABLE_TUI_BUILD != "true"
 
 publish:linux-gui:release:
   extends: .publish
-  needs: [build]
+  needs: [build:linux-gui]
   variables:
     PACKAGE_VERSION: $CI_COMMIT_TAG
     BINARY: git-sentinel-gui
@@ -356,16 +420,19 @@ publish:linux-gui:release:
 
 publish:windows:release:
   extends: .publish
-  needs: [build:windows]
+  needs:
+    - job: build:windows
+      optional: true
   variables:
     PACKAGE_VERSION: $CI_COMMIT_TAG
     BINARY: git-sentinel.exe
   rules:
-    - if: $CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+/
+      # skipped along with build:windows when the TUI binary is disabled
+    - if: $CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+/ && $DISABLE_TUI_BUILD != "true"
 
 publish:windows-gui:release:
   extends: .publish
-  needs: [build:windows]
+  needs: [build:windows-gui]
   variables:
     PACKAGE_VERSION: $CI_COMMIT_TAG
     BINARY: git-sentinel-gui.exe
@@ -376,15 +443,22 @@ publish:windows-gui:release:
 # live in .gitlab/ci/nightly.yml, triggered by trigger:nightly above.
 
 # ─────────────────────────────────────────────────────────────────| Release |──
+#
+# Known limitation: assets.links below is static, so if DISABLE_TUI_BUILD was
+# set for this tag, the console-binary links point at packages that were
+# never published. Not worth the extra complexity of generating this section
+# dynamically unless the flag actually sees real use at release time.
 
 release:
   stage: release
   image: registry.gitlab.com/gitlab-org/release-cli:latest
   interruptible: false    # never cancel a mid-flight release
   needs:
-    - publish:release
+    - job: publish:release
+      optional: true
     - publish:linux-gui:release
-    - publish:windows:release
+    - job: publish:windows:release
+      optional: true
     - publish:windows-gui:release
   rules:
     - if: $CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+/

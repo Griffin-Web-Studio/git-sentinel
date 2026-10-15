@@ -2,6 +2,14 @@
 # dist\git-sentinel.exe
 # Run from the project root directory.
 
+param(
+    # Which binary/binaries to build: console, gui, or all (default - used by
+    # local/CONTRIBUTING.md runs). CI passes "console" or "gui" explicitly so
+    # the two can build as separate, parallel jobs.
+    [ValidateSet("console", "gui", "all")]
+    [string]$Target = "all"
+)
+
 $ErrorActionPreference = "Stop"
 
 $ProjectRoot = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
@@ -32,43 +40,47 @@ $DataArgs = @(
     "--include-data-dir=$ProjectRoot\src\ui\webview\web=web"
 )
 
-Write-Host "Building console binary (this may take a few minutes)..."
-uv run python -m nuitka `
-    --onefile `
-    --output-filename=git-sentinel.exe `
-    --output-dir=build `
-    --enable-plugin=pyside6 `
-    --include-package=src.config.migrations `
-    --assume-yes-for-downloads `
-    --windows-icon-from-ico="$ProjectRoot\build\git-sentinel.ico" `
-    @DataArgs `
-    git-sentinel
+if ($Target -eq "console" -or $Target -eq "all") {
+    Write-Host "Building console binary (this may take a few minutes)..."
+    uv run python -m nuitka `
+        --onefile `
+        --output-filename=git-sentinel.exe `
+        --output-dir=build `
+        --enable-plugin=pyside6 `
+        --include-package=src.config.migrations `
+        --assume-yes-for-downloads `
+        --windows-icon-from-ico="$ProjectRoot\build\git-sentinel.ico" `
+        @DataArgs `
+        git-sentinel
 
-Copy-Item "$ProjectRoot\build\git-sentinel.exe" "$ProjectRoot\dist\git-sentinel.exe" -Force
+    Copy-Item "$ProjectRoot\build\git-sentinel.exe" "$ProjectRoot\dist\git-sentinel.exe" -Force
 
-if (-not (Test-Path "$ProjectRoot\dist\git-sentinel.exe")) {
-    Write-Error "ERROR: build failed - dist\git-sentinel.exe not found"
-    exit 1
+    if (-not (Test-Path "$ProjectRoot\dist\git-sentinel.exe")) {
+        Write-Error "ERROR: build failed - dist\git-sentinel.exe not found"
+        exit 1
+    }
 }
 
-Write-Host "Building windowed binary (this may take a few minutes)..."
-uv run python -m nuitka `
-    --onefile `
-    --output-filename=git-sentinel-gui.exe `
-    --output-dir=build `
-    --enable-plugin=pyside6 `
-    --include-package=src.config.migrations `
-    --assume-yes-for-downloads `
-    --windows-icon-from-ico="$ProjectRoot\build\git-sentinel.ico" `
-    --windows-console-mode=disable `
-    @DataArgs `
-    git-sentinel-gui
+if ($Target -eq "gui" -or $Target -eq "all") {
+    Write-Host "Building windowed binary (this may take a few minutes)..."
+    uv run python -m nuitka `
+        --onefile `
+        --output-filename=git-sentinel-gui.exe `
+        --output-dir=build `
+        --enable-plugin=pyside6 `
+        --include-package=src.config.migrations `
+        --assume-yes-for-downloads `
+        --windows-icon-from-ico="$ProjectRoot\build\git-sentinel.ico" `
+        --windows-console-mode=disable `
+        @DataArgs `
+        git-sentinel-gui
 
-Copy-Item "$ProjectRoot\build\git-sentinel-gui.exe" "$ProjectRoot\dist\git-sentinel-gui.exe" -Force
+    Copy-Item "$ProjectRoot\build\git-sentinel-gui.exe" "$ProjectRoot\dist\git-sentinel-gui.exe" -Force
 
-if (-not (Test-Path "$ProjectRoot\dist\git-sentinel-gui.exe")) {
-    Write-Error "ERROR: build failed - dist\git-sentinel-gui.exe not found"
-    exit 1
+    if (-not (Test-Path "$ProjectRoot\dist\git-sentinel-gui.exe")) {
+        Write-Error "ERROR: build failed - dist\git-sentinel-gui.exe not found"
+        exit 1
+    }
 }
 
-Write-Host "Build complete -> $ProjectRoot\dist\git-sentinel.exe, $ProjectRoot\dist\git-sentinel-gui.exe"
+Write-Host "Build complete -> $ProjectRoot\dist"

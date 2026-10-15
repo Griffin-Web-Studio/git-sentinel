@@ -65,14 +65,14 @@ test:windows:
     # ccache lets repeat builds skip recompiling unchanged C files.
     - apt-get update -qq && apt-get install -y -qq patchelf ccache
     - pip install uv --quiet
-  script:
-    - bash scripts/build.sh
   artifacts:
-    paths:
-      - dist/git-sentinel
-      - dist/git-sentinel-gui
     expire_in: 3 days
 
+# Console and windowed binaries build as separate jobs (per platform) so they
+# run in parallel instead of one job building both sequentially - see
+# .gitlab-ci.yml's build section for the full rationale and the
+# DISABLE_TUI_BUILD kill switch, which applies here too.
+#
 # Suffixes APP_VERSION with "-nightly.<short SHA>" before Nuitka runs so
 # the compiled binary reports e.g. "git-sentinel v0.2.0-nightly.a1b2c3d" - this
 # only mutates the CI job's worktree, never committed anywhere.
@@ -81,12 +81,36 @@ build:nightly:
   before_script:
     - !reference [.build, before_script]
     - python3 scripts/patch_nightly_version.py "$CI_COMMIT_SHORT_SHA"
+  script:
+    - bash scripts/build.sh console
+  artifacts:
+    paths:
+      - dist/git-sentinel
+  needs: [test, test:windows]
+  rules:
+      # not when the TUI build is disabled
+    - if: $DISABLE_TUI_BUILD == "true"
+      when: never
+
+      # otherwise always
+    - when: always
+
+build:linux-gui:nightly:
+  extends: .build
+  before_script:
+    - !reference [.build, before_script]
+    - python3 scripts/patch_nightly_version.py "$CI_COMMIT_SHORT_SHA"
+  script:
+    - bash scripts/build.sh gui
+  artifacts:
+    paths:
+      - dist/git-sentinel-gui
   needs: [test, test:windows]
 
-# Windows build. Nuitka auto-fetches a portable MinGW64 compiler on first
+# Windows builds. Nuitka auto-fetches a portable MinGW64 compiler on first
 # use (--assume-yes-for-downloads in build.ps1 avoids an interactive
 # prompt). See build:nightly above for the version suffixing rationale.
-build:windows:nightly:
+.build:windows:nightly:
   stage: build
   tags:
     - windows
@@ -94,12 +118,30 @@ build:windows:nightly:
   before_script:
     - pip install uv --quiet
     - python scripts/patch_nightly_version.py "$CI_COMMIT_SHORT_SHA"
-  script:
     - uv sync --frozen --group dev
-    - pwsh scripts/build.ps1
+
+build:windows:nightly:
+  extends: .build:windows:nightly
+  script:
+    - pwsh scripts/build.ps1 console
   artifacts:
     paths:
       - dist/git-sentinel.exe
+    expire_in: 3 days
+  rules:
+      # not when the TUI build is disabled
+    - if: $DISABLE_TUI_BUILD == "true"
+      when: never
+
+      # otherwise always
+    - when: always
+
+build:windows-gui:nightly:
+  extends: .build:windows:nightly
+  script:
+    - pwsh scripts/build.ps1 gui
+  artifacts:
+    paths:
       - dist/git-sentinel-gui.exe
     expire_in: 3 days
 
@@ -117,14 +159,35 @@ build:windows:nightly:
            "$CI_API_V4_URL/projects/$CI_PROJECT_ID/packages/generic/$PACKAGE/$PACKAGE_VERSION/$BINARY"
 
 # Overwrites the single "nightly" entry on every scheduled run that has
-# changes. Also records $CI_COMMIT_SHA as nightly-sha.txt so the next
-# scheduled run's check:nightly (in the parent pipeline) can detect whether
-# main has moved since this build.
+# changes. Skipped along with build:nightly when DISABLE_TUI_BUILD is set -
+# the nightly-sha.txt marker (below, on publish:linux-gui:nightly, which
+# always runs) stays decoupled from this so main-moved detection keeps
+# working regardless of the flag.
 publish:nightly:
   extends: .publish
-  needs: [build:nightly]
+  needs:
+    - job: build:nightly
+      optional: true
   variables:
     PACKAGE_VERSION: nightly
+  rules:
+      # not when the TUI build is disabled
+    - if: $DISABLE_TUI_BUILD == "true"
+      when: never
+
+      # otherwise always
+    - when: always
+
+# Also records $CI_COMMIT_SHA as nightly-sha.txt so the next scheduled run's
+# check:nightly (in the parent pipeline) can detect whether main has moved
+# since this build - lives here (rather than on publish:nightly) because
+# this job always runs, regardless of DISABLE_TUI_BUILD.
+publish:linux-gui:nightly:
+  extends: .publish
+  needs: [build:linux-gui:nightly]
+  variables:
+    PACKAGE_VERSION: nightly
+    BINARY: git-sentinel-gui
   script:
     - !reference [.publish, script]
     - |
@@ -134,23 +197,25 @@ publish:nightly:
            --upload-file nightly-sha.txt \
            "$CI_API_V4_URL/projects/$CI_PROJECT_ID/packages/generic/$PACKAGE/nightly/nightly-sha.txt"
 
-publish:linux-gui:nightly:
-  extends: .publish
-  needs: [build:nightly]
-  variables:
-    PACKAGE_VERSION: nightly
-    BINARY: git-sentinel-gui
-
 publish:windows:nightly:
   extends: .publish
-  needs: [build:windows:nightly]
+  needs:
+    - job: build:windows:nightly
+      optional: true
   variables:
     PACKAGE_VERSION: nightly
     BINARY: git-sentinel.exe
+  rules:
+      # not when the TUI build is disabled
+    - if: $DISABLE_TUI_BUILD == "true"
+      when: never
+
+      # otherwise always
+    - when: always
 
 publish:windows-gui:nightly:
   extends: .publish
-  needs: [build:windows:nightly]
+  needs: [build:windows-gui:nightly]
   variables:
     PACKAGE_VERSION: nightly
     BINARY: git-sentinel-gui.exe
