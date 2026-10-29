@@ -9,6 +9,7 @@ import pytest
 from src.models import (
     BranchIssue,
     BranchIssueReason,
+    MergedBranch,
     RemoteCheck,
     RemoteSkipReason,
     RepoResult,
@@ -492,3 +493,31 @@ class TestManageReports:
         bad.write_text("content")
         manage_reports(tmp_path, retention_days=0)
         assert bad.exists()
+
+
+class TestMergedBranchesReport:
+    """Merged branches are reported informationally, never as issues."""
+
+    def test_section_rendered(self, cfg: configparser.ConfigParser) -> None:
+        """A merged branch gets its own section naming the target.
+
+        Args:
+            cfg (configparser.ConfigParser): Fixture config.
+        """
+        r = _result(
+            merged_branches=[MergedBranch("feat", "origin", "main")],
+        )
+        out = format_report([r], set(), set(), cfg, NOW)
+
+        assert "[merged_branches]" in out
+        assert "feat → merged into origin/main" in out
+
+    def test_not_an_issue(self) -> None:
+        """Merged branches add no issue keys and do not flag the repo."""
+        r = _result(
+            has_remote=True,
+            merged_branches=[MergedBranch("feat", "origin", "main")],
+        )
+
+        assert collect_issue_keys([r]) == set()
+        assert not r.has_issues()

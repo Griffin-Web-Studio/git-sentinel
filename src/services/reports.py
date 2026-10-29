@@ -278,6 +278,27 @@ def format_report(
         )
         blank()
 
+    merged_repos = [r for r in results if r.merged_branches]
+
+    if merged_repos:
+        sec("merged_branches")
+        L.append(
+            "; Local branches already merged into a remote"
+            " — no action required, safe to delete locally"
+        )
+        L.extend(
+            line
+            for r in merged_repos
+            for line in (
+                f"  {r.short_path()}",
+                *(
+                    f"    {mb.branch} → merged into {mb.remote}/{mb.into}"
+                    for mb in r.merged_branches
+                ),
+            )
+        )
+        blank()
+
     tag_repos = [r for r in results if r.tag_issues]
 
     if tag_repos:
