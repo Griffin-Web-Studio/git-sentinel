@@ -8,6 +8,7 @@ import git
 import pytest
 
 from src.services.git_ops import (
+    annotate_behind_default,
     analyse_branches_and_tags,
     check_local_state,
     check_stale,
@@ -942,3 +943,175 @@ class TestSplitMergedBranches:
 
         assert remaining == []
         assert merged[0].remote == "upstream"
+
+
+# ───────────────────────────────────────────────| annotate_behind_default |──
+
+
+class TestAnnotateBehindDefault:
+    """Tests annotate_behind_default records lag behind main/master."""
+
+    def _diverged(self, repo: git.Repo) -> tuple[str, str]:
+        """Branch 'feature' off the first commit; default branch moves on.
+
+        Returns:
+            tuple[str, str]: (feature tip SHA, advanced default tip SHA).
+        """
+        p = Path(repo.working_dir)
+        default = repo.active_branch.name
+        repo.git.checkout("-b", "feature")
+        (p / "feat.txt").write_text("feat")
+        repo.index.add(["feat.txt"])
+        repo.index.commit("feature commit")
+        feat = repo.head.commit.hexsha
+        repo.git.checkout(default)
+        for n in range(2):
+            (p / f"m{n}.txt").write_text("m")
+            repo.index.add([f"m{n}.txt"])
+            repo.index.commit(f"default {n}")
+        return feat, repo.head.commit.hexsha
+
+    def _issue(self) -> BranchIssue:
+        return BranchIssue(
+            branch="feature",
+            remote="origin",
+            reason=BranchIssueReason.NOT_IN_ORIGIN,
+            commits=2,
+        )
+
+    def test_counts_commits_behind_main(self, repo: git.Repo) -> None:
+        """Feature missing two default-branch commits is two behind.
+
+        Args:
+            repo (git.Repo): Fixture providing a repo with one commit.
+        """
+        _, tip = self._diverged(repo)
+        path = Path(repo.working_dir)
+        issue = self._issue()
+        annotate_behind_default(
+            path,
+            [issue],
+            get_local_branches(path),
+            {"origin": {"main": tip}},
+        )
+
+        assert issue.behind == 2
+        assert issue.base == "origin/main"
+
+    def test_falls_back_to_master(self, repo: git.Repo) -> None:
+        """When origin has no main, master is used as the base.
+
+        Args:
+            repo (git.Repo): Fixture providing a repo with one commit.
+        """
+        _, tip = self._diverged(repo)
+        path = Path(repo.working_dir)
+        issue = self._issue()
+        annotate_behind_default(
+            path,
+            [issue],
+            get_local_branches(path),
+            {"origin": {"master": tip}},
+        )
+
+        assert issue.base == "origin/master"
+
+    def test_unknown_when_no_default_branch(self, repo: git.Repo) -> None:
+        """No main/master on the remote leaves behind unknown.
+
+        Args:
+            repo (git.Repo): Fixture providing a repo with one commit.
+        """
+        self._diverged(repo)
+        path = Path(repo.working_dir)
+        issue = self._issue()
+        annotate_behind_default(
+            path, [issue], get_local_branches(path), {"origin": {"dev": "a"}}
+        )
+
+        assert issue.behind is None
+        assert issue.base == ""
+
+    def test_unknown_when_object_not_local(self, repo: git.Repo) -> None:
+        """A default-branch SHA never fetched locally leaves behind unknown.
+
+        Args:
+            repo (git.Repo): Fixture providing a repo with one commit.
+        """
+        self._diverged(repo)
+        path = Path(repo.working_dir)
+        issue = self._issue()
+        annotate_behind_default(
+            path,
+            [issue],
+            get_local_branches(path),
+            {"origin": {"main": "f" * 40}},
+        )
+
+        assert issue.behind is None
+
+    def test_default_branch_itself_skipped(self, repo: git.Repo) -> None:
+        """An issue on main/master is never compared against itself.
+
+        Args:
+            repo (git.Repo): Fixture providing a repo with one commit.
+        """
+        repo.git.branch("-M", "main")
+        path = Path(repo.working_dir)
+        branches = get_local_branches(path)
+        issue = BranchIssue(
+            branch="main",
+            remote="origin",
+            reason=BranchIssueReason.AHEAD_OF_ORIGIN,
+            ahead=1,
+        )
+        annotate_behind_default(
+            path, [issue], branches, {"origin": {"main": branches[0]["sha"]}}
+        )
+
+        assert issue.behind is None
+
+    def test_unparseable_count_is_unknown(self, repo: git.Repo) -> None:
+        """Non-numeric rev-list output leaves behind unknown.
+
+        Args:
+            repo (git.Repo): Fixture providing a repo with one commit.
+        """
+        _, tip = self._diverged(repo)
+        path = Path(repo.working_dir)
+        issue = self._issue()
+        with patch(
+            "src.services.git_ops._run_git", return_value=(0, "oops", "")
+        ):
+            annotate_behind_default(
+                path,
+                [issue],
+                get_local_branches(path),
+                {"origin": {"main": tip}},
+            )
+
+        assert issue.behind is None
+
+    def test_no_origin_uses_any_remote(self, repo: git.Repo) -> None:
+        """With remote=None the first remote carrying a default branch wins.
+
+        Args:
+            repo (git.Repo): Fixture providing a repo with one commit.
+        """
+        _, tip = self._diverged(repo)
+        path = Path(repo.working_dir)
+        issue = BranchIssue(
+            branch="feature",
+            remote=None,
+            reason=BranchIssueReason.NOT_IN_ANY_REMOTE,
+            commits=2,
+        )
+        annotate_behind_default(
+            path,
+            [issue],
+            get_local_branches(path),
+            {"other": {"dev": "a"}, "upstream": {"main": tip}},
+        )
+
+        assert issue.behind == 2
+        assert issue.base == "upstream/main"

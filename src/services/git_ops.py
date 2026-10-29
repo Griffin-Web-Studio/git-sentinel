@@ -491,6 +491,68 @@ def _find_merge_target(
     return None
 
 
+DEFAULT_BRANCH_NAMES = ("main", "master")
+
+
+def _count_behind(repo: Path, sha: str, base_sha: str) -> int | None:
+    """Count commits reachable from *base_sha* but not from *sha*.
+
+    Args:
+        repo (Path): Repository root.
+        sha (str): Full commit SHA at the local branch tip.
+        base_sha (str): Full commit SHA of the remote default branch.
+
+    Returns:
+        int | None: The commit count, or None if git could not answer
+            (e.g. *base_sha* has never been fetched locally).
+    """
+    rc, out, _ = _run_git(repo, "rev-list", "--count", f"{sha}..{base_sha}")
+    if rc != 0:
+        return None
+    try:
+        return max(0, int(out))
+    except ValueError:
+        return None
+
+
+def annotate_behind_default(
+    repo: Path,
+    issues: list[BranchIssue],
+    local_branches: list[BranchInfo],
+    remote_heads_map: dict[str, dict[str, str]],
+) -> None:
+    """Record how far each issue branch is behind the remote's main/master.
+
+    Mutates *issues* in place, setting `behind` and `base`. The default
+    branch itself is skipped, as is any branch for which no main/master
+    exists on the relevant remote or can be compared locally.
+
+    Args:
+        repo (Path): Repository root.
+        issues (list[BranchIssue]): Branch issues to annotate.
+        local_branches (list[BranchInfo]): Output of get_local_branches.
+        remote_heads_map (dict[str, dict[str, str]]): Mapping of remote name
+            to {branch_name: sha} from fetch_remote_refs.
+    """
+    shas = {b["name"]: b["sha"] for b in local_branches}
+
+    for issue in issues:
+        sha = shas.get(issue.branch)
+        if not sha or issue.branch in DEFAULT_BRANCH_NAMES:
+            continue
+
+        remotes = [issue.remote] if issue.remote else list(remote_heads_map)
+        for rname in remotes:
+            heads = remote_heads_map.get(rname, {})
+            base = next((n for n in DEFAULT_BRANCH_NAMES if n in heads), None)
+            if base is None:
+                continue
+            issue.behind = _count_behind(repo, sha, heads[base])
+            if issue.behind is not None:
+                issue.base = f"{rname}/{base}"
+                break
+
+
 def split_merged_branches(
     repo: Path,
     issues: list[BranchIssue],
