@@ -24,7 +24,27 @@ def _fmt_branch_issue(bi: BranchIssue) -> str:
         bi (BranchIssue): The branch issue to format.
 
     Returns:
-        str: A four-space-indented description of the issue.
+        str: A four-space-indented description of the issue, with a
+            "behind" note appended when the branch lags its remote's
+            main/master.
+    """
+
+    line = _fmt_branch_reason(bi)
+
+    if bi.behind:
+        line += f" [{bi.behind} behind {bi.base}]"
+
+    return line
+
+
+def _fmt_branch_reason(bi: BranchIssue) -> str:
+    """Return the indented reason text for one branch issue.
+
+    Args:
+        bi (BranchIssue): The branch issue to format.
+
+    Returns:
+        str: A four-space-indented description of why the branch is flagged.
     """
 
     if bi.reason == BranchIssueReason.NOT_IN_ORIGIN:

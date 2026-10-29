@@ -113,6 +113,30 @@ class TestFmtBranchIssue:
         assert "not in any remote" in line
         assert "1 commit(s)" in line
 
+    def test_behind_note_appended(self) -> None:
+        """A branch behind the remote default shows how far and against what."""
+        bi = BranchIssue(
+            branch="feat",
+            remote="origin",
+            reason=BranchIssueReason.NOT_IN_ORIGIN,
+            commits=2,
+            behind=4,
+            base="origin/main",
+        )
+        assert _fmt_branch_issue(bi).endswith("[4 behind origin/main]")
+
+    def test_no_behind_note_when_up_to_date_or_unknown(self) -> None:
+        """Zero or unknown behind adds nothing to the line."""
+        for behind in (0, None):
+            bi = BranchIssue(
+                branch="feat",
+                remote="origin",
+                reason=BranchIssueReason.NOT_IN_ORIGIN,
+                commits=2,
+                behind=behind,
+            )
+            assert "behind" not in _fmt_branch_issue(bi)
+
     def test_indented_with_four_spaces(self) -> None:
         """Output line is indented with four spaces for report alignment."""
         bi = BranchIssue(
