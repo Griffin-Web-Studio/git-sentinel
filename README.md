@@ -148,6 +148,13 @@ For each repository:
 - For each remote, calls `git ls-remote --heads --tags` and compares the results
   against local branches and tags
 
+A local branch that is missing from or ahead of a remote, but whose commits
+are already contained in a remote branch (e.g. merged into `main`), is not
+flagged as an issue. It is logged as an info notice and listed under
+`[merged_branches]` in the report. Squash and rebase merges rewrite commits
+and are not detected, and a remote branch not yet fetched locally cannot be
+compared, so those branches are still reported as unpushed.
+
 SSH remotes prompt for approval in the GUI (once per host per session).
 HTTP remotes that fail offer a one-time retry prompt.
 
