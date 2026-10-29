@@ -155,6 +155,12 @@ flagged as an issue. It is logged as an info notice and listed under
 and are not detected, and a remote branch not yet fetched locally cannot be
 compared, so those branches are still reported as unpushed.
 
+A branch that is flagged as unpushed is also compared with the remote's `main`
+(or `master`). If that branch is missing commits `main` has since gained, the
+scan log shows a purple notice recommending a rebase, and the report line
+carries a `[N behind origin/main]` note. Nothing is reported when the remote
+has no `main`/`master`, or when its latest commit has not been fetched locally.
+
 SSH remotes prompt for approval in the GUI (once per host per session).
 HTTP remotes that fail offer a one-time retry prompt.
 
