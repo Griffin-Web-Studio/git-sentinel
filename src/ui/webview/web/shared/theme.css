@@ -18,6 +18,7 @@
   --error: #dc2626;
   --warning: #b45309;
   --info: #2563eb;
+  --rebase: #6b21a8;
   --mono: ui-monospace, "SFMono-Regular", Consolas, "Liberation Mono", Menlo,
     monospace;
   --sans: system-ui, -apple-system, "Segoe UI", sans-serif;
@@ -35,6 +36,7 @@
     --error: #f87171;
     --warning: #fbbf24;
     --info: #60a5fa;
+    --rebase: #c084fc;
   }
 }
 
@@ -49,6 +51,7 @@
   --error: #f87171;
   --warning: #fbbf24;
   --info: #60a5fa;
+  --rebase: #c084fc;
 }
 
 * {
