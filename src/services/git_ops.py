@@ -7,7 +7,7 @@ from typing import TypedDict
 
 import git
 
-from src.models import BranchIssue, BranchIssueReason, TagIssue
+from src.models import BranchIssue, BranchIssueReason, MergedBranch, TagIssue
 
 # ──────────────────────────────────────────────────────────| Repo discovery |──
 
@@ -459,6 +459,83 @@ def _check_tags(
         elif tag not in all_remote_tags:
             issues.append(TagIssue(tag=tag, remote=first_remote))
     return issues
+
+
+def _find_merge_target(
+    repo: Path,
+    sha: str,
+    candidates: dict[str, dict[str, str]],
+) -> tuple[str, str] | None:
+    """Return the first remote branch whose history contains *sha*.
+
+    Uses the remote head SHAs from ls-remote, so a head whose objects are not
+    present locally (never fetched) simply fails the ancestry test and is
+    skipped; the branch then stays reported as an issue rather than being
+    wrongly declared safe. Squash and rebase merges rewrite commits and are
+    therefore not detected.
+
+    Args:
+        repo (Path): Repository root.
+        sha (str): Full commit SHA at the local branch tip.
+        candidates (dict[str, dict[str, str]]): Remote name to
+            {branch_name: sha} to test against.
+
+    Returns:
+        tuple[str, str] | None: (remote, branch) of the first match, or None.
+    """
+    for rname, heads in candidates.items():
+        for hname, hsha in sorted(heads.items()):
+            rc, _, _ = _run_git(repo, "merge-base", "--is-ancestor", sha, hsha)
+            if rc == 0:
+                return rname, hname
+    return None
+
+
+def split_merged_branches(
+    repo: Path,
+    issues: list[BranchIssue],
+    local_branches: list[BranchInfo],
+    remote_heads_map: dict[str, dict[str, str]],
+) -> tuple[list[BranchIssue], list[MergedBranch]]:
+    """Separate branch issues that are really just already-merged branches.
+
+    A branch flagged as absent from, or ahead of, a remote is not at risk if
+    its tip is already an ancestor of a branch on that remote (e.g. it was
+    merged into main and its remote branch deleted).
+
+    Args:
+        repo (Path): Repository root.
+        issues (list[BranchIssue]): Output of analyse_branches_and_tags.
+        local_branches (list[BranchInfo]): Output of get_local_branches.
+        remote_heads_map (dict[str, dict[str, str]]): Mapping of remote name
+            to {branch_name: sha} from fetch_remote_refs.
+
+    Returns:
+        tuple[list[BranchIssue], list[MergedBranch]]: Issues that remain, and
+            the branches found to be already merged.
+    """
+    shas = {b["name"]: b["sha"] for b in local_branches}
+    remaining: list[BranchIssue] = []
+    merged: list[MergedBranch] = []
+
+    for issue in issues:
+        sha = shas.get(issue.branch)
+        if issue.remote is None:
+            candidates = remote_heads_map
+        else:
+            candidates = {issue.remote: remote_heads_map.get(issue.remote, {})}
+
+        target = _find_merge_target(repo, sha, candidates) if sha else None
+        if target:
+            merged.append(
+                MergedBranch(
+                    branch=issue.branch, remote=target[0], into=target[1]
+                )
+            )
+        else:
+            remaining.append(issue)
+
+    return remaining, merged
 
 
 def analyse_branches_and_tags(

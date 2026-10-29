@@ -17,9 +17,10 @@ from src.services.git_ops import (
     get_local_tags,
     get_remotes,
     is_ssh_url,
+    split_merged_branches,
     ssh_host_key,
 )
-from src.models import BranchIssueReason, TagIssueReason
+from src.models import BranchIssue, BranchIssueReason, TagIssueReason
 
 # ────────────────────────────────────────────────────────────────| Fixtures |──
 
@@ -839,3 +840,105 @@ class TestAnalyseBranchesAndTags:
         assert len(ti) == 1
         assert ti[0].tag == "v2.0.0"
         assert ti[0].remote == "upstream"
+
+
+# ───────────────────────────────────────────────────| split_merged_branches |──
+
+
+class TestSplitMergedBranches:
+    """Tests split_merged_branches separates merged branches from issues."""
+
+    def _feature_branch(self, repo: git.Repo) -> tuple[str, str]:
+        """Create a feature branch one commit past the default branch.
+
+        Returns:
+            tuple[str, str]: (default branch tip SHA, feature tip SHA).
+        """
+        base = repo.head.commit.hexsha
+        p = Path(repo.working_dir)
+        repo.git.checkout("-b", "feature")
+        (p / "feat.txt").write_text("feat")
+        repo.index.add(["feat.txt"])
+        repo.index.commit("feature commit")
+        return base, repo.head.commit.hexsha
+
+    def test_merged_into_remote_branch_is_split_out(
+        self, repo: git.Repo
+    ) -> None:
+        """A branch absent from origin but contained in origin/main is merged.
+
+        Args:
+            repo (git.Repo): Fixture providing a repo with one commit.
+        """
+        _, feat = self._feature_branch(repo)
+        path = Path(repo.working_dir)
+        branches = get_local_branches(path)
+        heads = {"origin": {"main": feat}}
+        issues, _ = analyse_branches_and_tags(
+            path, branches, [], {"origin": {}}, {}, True
+        )
+        remaining, merged = split_merged_branches(path, issues, branches, heads)
+
+        assert not any(i.branch == "feature" for i in remaining)
+        feature = next(m for m in merged if m.branch == "feature")
+        assert feature.remote == "origin"
+        assert feature.into == "main"
+
+    def test_unmerged_branch_stays_an_issue(self, repo: git.Repo) -> None:
+        """A branch with commits not in any remote head remains an issue.
+
+        Args:
+            repo (git.Repo): Fixture providing a repo with one commit.
+        """
+        base, _ = self._feature_branch(repo)
+        path = Path(repo.working_dir)
+        branches = get_local_branches(path)
+        heads = {"origin": {"main": base}}
+        issues, _ = analyse_branches_and_tags(
+            path, branches, [], heads, {}, True
+        )
+        remaining, merged = split_merged_branches(path, issues, branches, heads)
+
+        assert any(i.branch == "feature" for i in remaining)
+        assert merged == []
+
+    def test_unknown_remote_object_is_not_merged(self, repo: git.Repo) -> None:
+        """A remote head whose object is absent locally is never a match.
+
+        Args:
+            repo (git.Repo): Fixture providing a repo with one commit.
+        """
+        self._feature_branch(repo)
+        path = Path(repo.working_dir)
+        branches = get_local_branches(path)
+        heads = {"origin": {"main": "f" * 40}}
+        issues, _ = analyse_branches_and_tags(
+            path, branches, [], heads, {}, True
+        )
+        remaining, merged = split_merged_branches(path, issues, branches, heads)
+
+        assert len(remaining) == len(issues)
+        assert merged == []
+
+    def test_no_origin_checks_all_remotes(self, repo: git.Repo) -> None:
+        """With remote=None the branch is tested against every remote.
+
+        Args:
+            repo (git.Repo): Fixture providing a repo with one commit.
+        """
+        _, feat = self._feature_branch(repo)
+        path = Path(repo.working_dir)
+        branches = get_local_branches(path)
+        heads = {"upstream": {"main": feat}}
+        issue = BranchIssue(
+            branch="feature",
+            remote=None,
+            reason=BranchIssueReason.NOT_IN_ANY_REMOTE,
+            commits=2,
+        )
+        remaining, merged = split_merged_branches(
+            path, [issue], branches, heads
+        )
+
+        assert remaining == []
+        assert merged[0].remote == "upstream"
