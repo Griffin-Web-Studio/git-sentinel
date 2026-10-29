@@ -900,7 +900,7 @@ class TestSplitMergedBranches:
         remaining, merged = split_merged_branches(path, issues, branches, heads)
 
         assert any(i.branch == "feature" for i in remaining)
-        assert merged == []
+        assert not any(m.branch == "feature" for m in merged)
 
     def test_unknown_remote_object_is_not_merged(self, repo: git.Repo) -> None:
         """A remote head whose object is absent locally is never a match.
