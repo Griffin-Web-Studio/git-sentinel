@@ -104,6 +104,24 @@ class BranchIssue:
 
 
 @dataclass
+class MergedBranch:
+    """Describes a local branch whose commits are all already in a remote.
+
+    Purely informational: nothing is at risk, but the local branch is
+    typically safe to delete.
+
+    Attributes:
+        branch: Local branch name.
+        remote: Remote that contains the branch's commits.
+        into: Remote branch whose history already includes the local tip.
+    """
+
+    branch: str
+    remote: str
+    into: str
+
+
+@dataclass
 class TagIssue:
     """Describes a local tag that is absent from a remote.
 
@@ -131,6 +149,8 @@ class RepoResult:
         untracked: Paths of non-ignored untracked files.
         stashes: Lines from git stash list.
         branch_issues: Branches not safely backed up; see BranchIssue.
+        merged_branches: Branches already merged into a remote; see
+            MergedBranch. Informational only, never counted as an issue.
         tag_issues: Tags absent from their expected remote; see TagIssue.
         remote_checks: Per-remote reachability results; see RemoteCheck.
         is_stale: True if the last commit across all branches exceeds the
@@ -146,6 +166,7 @@ class RepoResult:
     untracked: list[str] = field(default_factory=list)
     stashes: list[str] = field(default_factory=list)
     branch_issues: list[BranchIssue] = field(default_factory=list)
+    merged_branches: list[MergedBranch] = field(default_factory=list)
     tag_issues: list[TagIssue] = field(default_factory=list)
     remote_checks: list[RemoteCheck] = field(default_factory=list)
     is_stale: bool = False
