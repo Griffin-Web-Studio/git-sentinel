@@ -36,6 +36,7 @@ class FakeApp:
         """
 
         self.logs: list[str] = []
+        self.tags: list[str] = []
         self.statuses: list[str] = []
         self.progresses: list[float] = []
         self.finish_call: tuple[int, Path | None] | None = None
@@ -47,10 +48,11 @@ class FakeApp:
 
         Args:
             text (str): Line to append.
-            tag (str): Optional colour tag ("error", "warning", "info").
+            tag (str): Optional colour tag ("error", "warning", "info", "rebase").
         """
 
         self.logs.append(text)
+        self.tags.append(tag)
 
     def set_status(self, text: str) -> None:
         """Record a status update.
@@ -660,6 +662,39 @@ class TestScanRepo:
 
         assert any("1 branch issue(s)" in m for m in app.logs)
         assert any("1 tag issue(s)" in m for m in app.logs)
+
+    def test_branch_behind_default_logged_as_rebase(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A branch lagging main gets a rebase-tagged recommendation.
+
+        Args:
+            monkeypatch (pytest.MonkeyPatch): Stubs the git operations via
+                _patch_git_ops().
+        """
+
+        self._patch_git_ops(
+            monkeypatch, remotes={"origin": "https://github.com/u/r.git"}
+        )
+        bi = BranchIssue(
+            branch="feature",
+            remote="origin",
+            reason=BranchIssueReason.NOT_IN_ORIGIN,
+            behind=3,
+            base="origin/main",
+        )
+        monkeypatch.setattr(
+            "src.services.scan.analyse_branches_and_tags",
+            lambda *a: ([bi], []),
+        )
+        app = FakeApp()
+        _scan_repo(app, self.REPO, 0, 1, set(), set(), None, False, 90)
+
+        idx = next(i for i, m in enumerate(app.logs) if "not in sync" in m)
+        assert app.tags[idx] == "rebase"
+        assert "feature" in app.logs[idx]
+        assert "origin/main" in app.logs[idx]
+        assert "rebase recommended" in app.logs[idx]
 
 
 # ────────────────────────────────────────────────────────────────────| scan |──

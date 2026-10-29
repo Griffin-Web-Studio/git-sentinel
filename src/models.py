@@ -218,7 +218,7 @@ class MsgLog(NamedTuple):
     Attributes:
         text: Line to append; a newline is added automatically.
         tag: Optional colour tag applied to the
-            line ("error", "warning", "info").
+            line ("error", "warning", "info", "rebase").
     """
 
     text: str
@@ -401,7 +401,8 @@ class AppProtocol(Protocol):
 
         Args:
             text (str): Log text
-            tag (str): Optional colour tag ("error", "warning", "info").
+            tag (str): Optional colour tag
+                ("error", "warning", "info", "rebase").
         """
         ...
 

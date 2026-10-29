@@ -8,6 +8,7 @@ from pathlib import Path
 from src import APP_NAME, APP_VERSION
 from src.config import get_export_path
 from src.services.git_ops import (
+    annotate_behind_default,
     analyse_branches_and_tags,
     check_local_state,
     check_stale,
@@ -258,6 +259,18 @@ def _scan_repo(
     result.branch_issues, result.merged_branches = split_merged_branches(
         repo, result.branch_issues, local_branches, remote_heads_map
     )
+
+    annotate_behind_default(
+        repo, result.branch_issues, local_branches, remote_heads_map
+    )
+
+    for bi in result.branch_issues:
+        if bi.behind:
+            app.log(
+                f"  ~  {bi.branch}: base is not in sync with {bi.base} "
+                f"({bi.behind} commit(s) behind, rebase recommended)",
+                tag="rebase",
+            )
 
     for mb in result.merged_branches:
         app.log(

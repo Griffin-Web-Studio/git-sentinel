@@ -41,7 +41,7 @@ class ScanController(AppProtocol):
 
         Args:
             text (str): Line to append; a newline is added by the view.
-            tag (str): Optional colour tag ("error", "warning", "info").
+            tag (str): Optional colour tag ("error", "warning", "info", "rebase").
         """
 
         self._bus.emit("scan.log", MsgLog(text, tag))
