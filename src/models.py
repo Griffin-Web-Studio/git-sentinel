@@ -94,6 +94,11 @@ class BranchIssue:
         ahead: Number of commits the local branch is ahead of the remote.
         commits: Total local commits when the branch is entirely absent
             from the remote.
+        behind: Number of commits on the remote's main/master that the
+            branch does not contain, or None when unknown (no main/master
+            on the remote, or its objects are not available locally).
+        base: Remote default branch that `behind` was measured against, or
+            an empty string when `behind` is None.
     """
 
     branch: str
@@ -101,6 +106,8 @@ class BranchIssue:
     reason: BranchIssueReason
     ahead: int = 0
     commits: int = 0
+    behind: int | None = None
+    base: str = ""
 
 
 @dataclass
