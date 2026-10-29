@@ -17,6 +17,7 @@ from src.services.git_ops import (
     get_local_tags,
     get_remotes,
     is_ssh_url,
+    split_merged_branches,
     ssh_host_key,
 )
 from src.models import AppProtocol, RemoteCheck, RemoteSkipReason, RepoResult
@@ -254,6 +255,15 @@ def _scan_repo(
         remote_tags_map,
         has_origin,
     )
+    result.branch_issues, result.merged_branches = split_merged_branches(
+        repo, result.branch_issues, local_branches, remote_heads_map
+    )
+
+    for mb in result.merged_branches:
+        app.log(
+            f"  i  {mb.branch}: already merged into {mb.remote}/{mb.into}",
+            tag="info",
+        )
 
     parts: list[str] = []
 
