@@ -82,6 +82,15 @@ def _build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _prepare_gui() -> None:
+    """Apply platform-specific GUI setup before webview.start()."""
+
+    if sys.platform != "win32":
+        from src.platform.linux.gui import configure_webengine
+
+        configure_webengine()
+
+
 def _run_scan_gui(cfg: configparser.ConfigParser) -> None:
     """Launch the scan window (pywebview). Identical for both binaries."""
 
@@ -90,6 +99,7 @@ def _run_scan_gui(cfg: configparser.ConfigParser) -> None:
     from .ui.webview.views.scan_window import create_scan_window
 
     create_scan_window(cfg)
+    _prepare_gui()
     webview.start(gui="qt")
 
 
@@ -112,6 +122,7 @@ def _run_gui_installer(
         )
 
         api = create_install_wizard(force=force)
+        _prepare_gui()
         webview.start(gui="qt")
         api.controller.relaunch_if_requested()
 
@@ -119,6 +130,7 @@ def _run_gui_installer(
         from .ui.webview.views.uninstall_window import create_uninstall_window
 
         create_uninstall_window()
+        _prepare_gui()
         webview.start(gui="qt")
 
 
