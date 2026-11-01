@@ -72,6 +72,7 @@
         "emmet.includeLanguages": {
           "django-html": "html"
         },
+        "todo-tree.ripgrep.ripgrep": "/usr/bin/rg",
         // temp
         "python.useEnvironmentsExtension": true
       }

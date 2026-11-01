@@ -7,6 +7,7 @@ set -euo pipefail
 # patchelf and ccache are Nuitka's Linux build prerequisites (same as CI).
 sudo apt-get update -qq
 sudo apt-get install -y -qq \
+  ripgrep \
   libxkbfile1 \
   libxcb-cursor0 \
   libxcb-icccm4 \
