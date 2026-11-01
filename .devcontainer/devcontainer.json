@@ -75,6 +75,29 @@
           "django-html": "html"
         },
         "todo-tree.ripgrep.ripgrep": "/usr/bin/rg",
+        "too-long-line-limit.disabledIn": [
+          "compose",
+          "blade",
+          "svelte",
+          "cmake",
+          "dockerfile",
+          "dotenv",
+          "editorconfig",
+          "gitignore",
+          "html",
+          "django-html",
+          "ini",
+          "json",
+          "jsonc",
+          "log",
+          "makefile",
+          "markdown",
+          "plaintext",
+          "properties",
+          "yaml",
+          "toml",
+          "svg"
+        ],
         // temp
         "python.useEnvironmentsExtension": true
       }
