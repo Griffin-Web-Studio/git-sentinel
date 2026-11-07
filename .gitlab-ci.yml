@@ -211,7 +211,7 @@ trigger:nightly:
 # mypy strict + pytest with a 75% coverage gate.
 test:
   stage: test
-  image: python:3.14
+  image: python:3.15
   rules:
       # handled by the nightly child pipeline instead
     - if: $CI_PIPELINE_SOURCE == "schedule"
@@ -245,7 +245,7 @@ test:windows:
 
 .build:
   stage: build
-  image: python:3.14
+  image: python:3.15
   variables:
     # Unlike the Windows build runner (a persistent self-hosted machine),
     # this job runs in a fresh container every time, so Nuitka's own cache
