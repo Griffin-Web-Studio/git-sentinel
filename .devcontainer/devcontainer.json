@@ -6,7 +6,7 @@
   "image": "mcr.microsoft.com/devcontainers/python:3-trixie",
   "features": {
     // Node needed for some VSCode extensions like SonarQube
-    "ghcr.io/devcontainers/features/node:1": {
+    "ghcr.io/devcontainers/features/node:2": {
       "nodeGypDependencies": true,
       "version": "lts",
       "pnpmVersion": "latest",
